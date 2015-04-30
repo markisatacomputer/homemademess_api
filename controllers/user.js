@@ -2,6 +2,7 @@ exports.install = function(framework) {
 	framework.route('/user/', json_user_query);
 	framework.route('/user/{id}/', json_user_get);
 	framework.route('/user/{id}/', json_user_save, ['post', 'json']);
+	framework.route('/user/', json_user_create, ['post', 'json']);
 	framework.route('/user/{id}/', json_user_delete, ['delete']);
 };
 
@@ -58,18 +59,43 @@ function json_user_save(id) {
 	// self.model('user').Schema;
 	// framework.model('user').Schema;
 	var User = MODEL('user').Schema;
-
+	
 	console.log('save ->', id);
 
 	// What is it? https://github.com/totaljs/examples/tree/master/changes
 	self.change('user: save, id: ' + id);
 
-	User.findById(id, function(err, doc) {
-		// Please do not save a document (THANKS :-))
-		// doc.save();
-		self.json({ r: true });
+	User.update({_id: id}, self.req.body, function(e,r) {
+		if (r) {
+			self.json(r);
+		} else {
+			self.json(e);
+		}
 	});
+}
 
+/*
+	Description: Create user
+	Method: POST
+	Output: JSON
+*/
+function json_user_create() {
+
+	var self = this;
+
+	// self.model('user').Schema;
+	// framework.model('user').Schema;
+	var User = MODEL('user').Schema;
+		
+	User.create(self.req.body, function(e,r) {
+		if (r) {
+			self.json(r);
+			console.log('create ->', r._id);
+			self.change('user: create, id: ' + r._id);
+		} else {
+			self.json(e);
+		}
+	});
 }
 
 /*

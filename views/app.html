@@ -1,52 +1,27 @@
-@{layout('')}
 @{meta('title', 'description', 'keywords')}
-
-@{ng('angular', 'resource', 'route')}
 
 <!-- /app/css/ -->
 @{ngStyle('app')}
+
+@{ngResource('user')}
 
 <!-- cdnjs -->
 @{ngLocale('en-us')}
 
 <!-- /app/controllers/ -->
-@{ngController('home', 'user')}
+@{ngController('user')}
 
-<!DOCTYPE html>
-<html ng-app="app">
-<head>
-    @{meta}
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=11" />
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="all,follow" />
-    @{head}
-    @{favicon('favicon.ico')}
-</head>
-<body>
+<div ng-controller="UserCtrl">
 
-    <div class="container-background">
-        <div class="container">
-            <div ng-controller="HomeCtrl">{{ name }}</div>
-        </div>
-    </div>
+	<h2>All users ({{ users.length }})</h2>
+	<ul>
+		<li ng-repeat="user in users | limitTo:2"><a href="javascript:void(0)" ng-click="edit(user._id)">edit</a> - <a href="javascript:void(0)" ng-click="delete(user._id)">delete</a> {{ user.alias }}</li>
+	</ul>
 
-    <div ng-controller="UserCtrl">
+  <div class="button">
+    <button ng-click="create()">Create New User</button>
+  </div>
 
-        <h2>All users ({{ users.length }})</h2>
-        <ul>
-            <li ng-repeat="user in users | limitTo:2"><a href="javascript:void(0)" ng-click="edit(user._id)">edit</a> - <a href="javascript:void(0)" ng-click="delete(user._id)">delete</a> {{ user.alias }}</li>
-        </ul>
+	<div ng-include src="'/templates/form.html'" ng-show="isForm"></div>
 
-        <div ng-include src="'/templates/form.html'" ng-show="isForm"></div>
-
-    </div>
-
-    <div class="footer">
-        <a href="http://www.totaljs.com"><img src="/img/totaljs.png" width="24" height="24" alt="total.js - web application framework for node.js" /></a>
-    </div>
-
-
-</body>
-</html>
+</div>
