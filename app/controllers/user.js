@@ -9,11 +9,14 @@ function UserCtrl($scope, User) {
     };
 
     $scope.save = function() {
-    	if ($scope.user._id ) {
-        $scope.user.$save({ id: $scope.user._id });
+    	var refresh = function() {
+        $scope.users = User.query();
+      };
+      if ($scope.user._id ) {
+        $scope.user.$save({ id: $scope.user._id }, refresh);
         $scope.isForm = false;
       } else {
-        $scope.user.$save();
+        $scope.user.$save(refresh);
         $scope.isForm = false;
       }
     };

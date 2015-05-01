@@ -15,7 +15,7 @@
 
 	<h2>All users ({{ users.length }})</h2>
 	<ul>
-		<li ng-repeat="user in users | limitTo:2"><a href="javascript:void(0)" ng-click="edit(user._id)">edit</a> - <a href="javascript:void(0)" ng-click="delete(user._id)">delete</a> {{ user.alias }}</li>
+		<li ng-repeat="user in users | limitTo:20"><a href="javascript:void(0)" ng-click="edit(user._id)">edit</a> - <a href="javascript:void(0)" ng-click="delete(user._id)">delete</a> {{ user.alias }}</li>
 	</ul>
 
   <div class="button">
