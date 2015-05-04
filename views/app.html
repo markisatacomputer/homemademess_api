@@ -3,7 +3,7 @@
 <!-- /app/css/ -->
 @{ngStyle('app')}
 
-@{ngResource('user')}
+@{ngResource('user','bucket')}
 
 <!-- cdnjs -->
 @{ngLocale('en-us')}
@@ -27,7 +27,12 @@
 </div>
 
 <div ng-controller="BucketCtrl">
+  <h2>All buckets ({{ buckets.length }})</h2>
   <ul>
-    <li ng-repeat="bucket in buckets | limitTo:20">Bucket: {{ bucket }}</li>
+    <li ng-repeat="bucket in buckets | limitTo:20"><a href="javascript:void(0)" ng-click="view_bucket(bucket.Name)">{{ bucket.Name }}</a></li>
+  </ul>
+  <h2 ng-show="objects.length > 0">All objects ({{ objects.length }})</h2>
+  <ul>
+    <li ng-repeat="object in objects | limitTo:20">{{object}}</li>
   </ul>
 </div>

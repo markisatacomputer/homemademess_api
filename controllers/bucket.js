@@ -1,5 +1,6 @@
 exports.install = function() {
     framework.route('/bucket/', view_buckets);
+    framework.route('/bucket/{id}', view_objects);
 };
 
 function view_buckets() {
@@ -17,5 +18,14 @@ function view_buckets() {
       }
     }
     self.json(list);
+  });
+}
+function view_objects(id) {
+  var self = this;
+  dreamObjects.listObjects({Bucket: id}, function(err, data){
+    if (err) { console.log("Error:", err); }
+    else {
+      self.json(data);
+    }
   });
 }
