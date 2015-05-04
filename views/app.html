@@ -9,7 +9,7 @@
 @{ngLocale('en-us')}
 
 <!-- /app/controllers/ -->
-@{ngController('user')}
+@{ngController('user','bucket')}
 
 <div ng-controller="UserCtrl">
 
@@ -24,4 +24,10 @@
 
 	<div ng-include src="'/templates/form.html'" ng-show="isForm"></div>
 
+</div>
+
+<div ng-controller="BucketCtrl">
+  <ul>
+    <li ng-repeat="bucket in buckets | limitTo:20">Bucket: {{ bucket }}</li>
+  </ul>
 </div>
