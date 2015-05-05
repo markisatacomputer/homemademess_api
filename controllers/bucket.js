@@ -1,6 +1,7 @@
 exports.install = function() {
     framework.route('/bucket/', view_buckets);
-    framework.route('/bucket/{id}', view_objects);
+    framework.route('/bucket/{id}/', view_objects);
+    framework.route('/bucket/{id}/{key}/image', view_image);
 };
 
 function view_buckets() {
@@ -27,5 +28,23 @@ function view_objects(id) {
     else {
       self.json(data);
     }
+  });
+}
+function view_image(id,key) {
+  var self = this;
+  var gm = require('gm');
+  var params = {Bucket: id, Key: decodeURIComponent(key)};
+  var local = require('fs').createWriteStream('public/temp.jpg');
+  var file = dreamObjects.getObject(params).createReadStream();
+  var img = gm(file);
+  // image manipulations
+  img.resize(400).compress('JPEG').quality(60).stream().on('data', function(d){
+    local.write(d);
+  }).on('end', function(){
+    local.end();
+    self.json({message:'hello'});
+  }).on('error', function() { 
+    console.log(':(');
+    console.log('stream didn\'t work');
   });
 }

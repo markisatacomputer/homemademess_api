@@ -31,8 +31,9 @@
   <ul>
     <li ng-repeat="bucket in buckets | limitTo:20"><a href="javascript:void(0)" ng-click="view_bucket(bucket.Name)">{{ bucket.Name }}</a></li>
   </ul>
-  <h2 ng-show="objects.length > 0">All objects ({{ objects.length }})</h2>
+  <h2 ng-show="objs.length > 0">All objects ({{ objs.length }})</h2>
   <ul>
-    <li ng-repeat="object in objects | limitTo:20">{{object}}</li>
+    <li ng-repeat="obj in objs | limitTo:40"><a href="javascript:void(0)" ng-click="view_object(bucket, obj.Key)">{{obj.Key}}</a></li>
   </ul>
+  <div class="Image" ng-show="img != undefined">{{img}}</div>
 </div>
