@@ -1,5 +1,5 @@
 app.factory('Bucket', function($resource) {
-  return $resource('/bucket/:id/:key/', { id: '@id' });
+  return $resource('/bucket/:id/', { id: '@id' });
 }).factory('Image', function($resource) {
-  return $resource('/bucket/:id/:key/image/');
+  return $resource('/object/:id/:key/');
 });

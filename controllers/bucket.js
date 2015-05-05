@@ -1,7 +1,7 @@
 exports.install = function() {
     framework.route('/bucket/', view_buckets);
     framework.route('/bucket/{id}/', view_objects);
-    framework.route('/bucket/{id}/{key}/image', view_image);
+    framework.file('All *.jpg', view_image);
 };
 
 function view_buckets() {
@@ -30,21 +30,34 @@ function view_objects(id) {
     }
   });
 }
-function view_image(id,key) {
-  var self = this;
+function view_image(req,res,isValidation) {
+  //*
+  if (isValidation && req.url.indexOf('.JPG') !== -1 && req.url.indexOf('/object/') !== -1) {
+    var path = req.uri.path
+    path = path.split('/');
+    console.log(path);
+
+    var gm = require('gm');
+    var params = {Bucket: path[2], Key: decodeURIComponent(path[3])};
+    var local = require('fs').createWriteStream('public/temp.jpg');
+    var file = dreamObjects.getObject(params).createReadStream();
+    var img = gm(file).resize(400).compress('JPEG').quality(60).stream();
+
+    framework.responseStream(req, res, 'image/jpeg', img, 'temp.jpg');
+    //framework.responseImage(req, res, img, function(image){});
+  }
+  
+  /*
   var gm = require('gm');
   var params = {Bucket: id, Key: decodeURIComponent(key)};
   var local = require('fs').createWriteStream('public/temp.jpg');
   var file = dreamObjects.getObject(params).createReadStream();
-  var img = gm(file);
-  // image manipulations
-  img.resize(400).compress('JPEG').quality(60).stream().on('data', function(d){
-    local.write(d);
-  }).on('end', function(){
-    local.end();
-    self.json({message:'hello'});
-  }).on('error', function() { 
-    console.log(':(');
-    console.log('stream didn\'t work');
+  var img = gm(file).resize(400).compress('JPEG').quality(60).stream();
+
+  framework.responseStream(req, res, contentType, img, 'temp.jpg');
+  framework.responseImage(req, res, img, function(img){
+    image.resize('400');
+    image.minify();
   });
+  */
 }
