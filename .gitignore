@@ -1,6 +1,8 @@
 node_modules
-bower_components
-.DS_Store
-tmp
-config
 public
+.DS_Store
+.tmp
+.idea
+client/bower_components
+dist
+/server/config/local.env.js
