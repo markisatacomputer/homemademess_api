@@ -15,7 +15,8 @@ function BucketCtrl($scope, Bucket, Image) {
   $scope.view_object = function(id,key) {
     var img = Image.get({id: id, key: key});
     img.$promise.then( function (e,r,d){
-      $scope.img = img;
+      $scope.img = '';
+      $scope.img = 'temp.jpg?' + new Date().getTime();
     });
   }
 }

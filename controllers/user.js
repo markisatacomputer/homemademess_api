@@ -22,7 +22,11 @@ function json_user_query() {
 	console.log('query -> all');
 
 	User.find(function(err, docs) {
-		self.json(docs);
+		if (err) {
+			console.log(err);
+		} else {
+			self.json(docs);
+		}
 	});
 }
 

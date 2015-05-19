@@ -1,7 +1,7 @@
 exports.install = function() {
     framework.route('/bucket/', view_buckets);
     framework.route('/bucket/{id}/', view_objects);
-    framework.file('All *.jpg', view_image);
+    framework.route('/bucket/{id}/{key}/img/', view_image);
 };
 
 function view_buckets() {
@@ -30,34 +30,23 @@ function view_objects(id) {
     }
   });
 }
-function view_image(req,res,isValidation) {
-  //*
-  if (isValidation && req.url.indexOf('.JPG') !== -1 && req.url.indexOf('/object/') !== -1) {
-    var path = req.uri.path
-    path = path.split('/');
-    console.log(path);
-
-    var gm = require('gm');
-    var params = {Bucket: path[2], Key: decodeURIComponent(path[3])};
-    var local = require('fs').createWriteStream('public/temp.jpg');
-    var file = dreamObjects.getObject(params).createReadStream();
-    var img = gm(file).resize(400).compress('JPEG').quality(60).stream();
-
-    framework.responseStream(req, res, 'image/jpeg', img, 'temp.jpg');
-    //framework.responseImage(req, res, img, function(image){});
-  }
+function view_image(id,key) {
+  var self = this;
   
-  /*
-  var gm = require('gm');
+  // get image from DreamObjects
   var params = {Bucket: id, Key: decodeURIComponent(key)};
-  var local = require('fs').createWriteStream('public/temp.jpg');
   var file = dreamObjects.getObject(params).createReadStream();
-  var img = gm(file).resize(400).compress('JPEG').quality(60).stream();
-
-  framework.responseStream(req, res, contentType, img, 'temp.jpg');
-  framework.responseImage(req, res, img, function(img){
-    image.resize('400');
-    image.minify();
-  });
-  */
+  
+  //  transform on the way to local file
+  var gm = require('gm');
+  var img = gm(file).resize(400).compress('JPEG').quality(60).stream(function (err, stdout, stderr) {
+    // local temp path
+    var local = require('fs').createWriteStream('public/temp.jpg');
+    // notify client when we're done writing local
+    local.on('finish', function(){
+      self.json({message: 'booya'});
+    });
+    // write to local
+    stdout.pipe(local);
+  });  
 }
