@@ -1,12 +1,6 @@
 'use strict'
 
 angular.module 'hmm2App'
-.controller 'AdminCtrl', ($scope, $http, Auth, User) ->
+.controller 'AdminCtrl', ($scope, $http, Auth) ->
 
-  $http.get '/api/users'
-  .success (users) ->
-    $scope.users = users
-
-  $scope.delete = (user) ->
-    User.remove id: user._id
-    _.remove $scope.users, user
+  

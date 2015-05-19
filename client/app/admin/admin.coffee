@@ -7,3 +7,8 @@ angular.module 'hmm2App'
     url: '/admin'
     templateUrl: 'app/admin/admin.html'
     controller: 'AdminCtrl'
+
+  .state 'admin-users',
+    url: '/admin/users'
+    templateUrl: 'app/admin/user/user.html'
+    controller: 'UserAdminCtrl'
