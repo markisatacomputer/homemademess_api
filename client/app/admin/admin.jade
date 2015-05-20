@@ -1,7 +1,15 @@
 div(ng-include='"components/navbar/navbar.html"')
 .container
-  p
-    | Hello Admin.
 
-  form.dropzone(enctype="multipart/form-data", ng-data, ng-dropzone, dropzone="dropzone", dropzone-config="dropzoneConfig")
-    input(name="file", type="file", multiple)
+  .editor
+    {{files | json : spacing}}
+    .name
+
+    .details
+
+    .tags
+
+  .drop
+    form.dropzone(enctype="multipart/form-data", ng-data, ng-dropzone, dropzone="dropzone", dropzone-config="dropzoneConfig")
+      input(name="file", type="file", multiple)
+    form.preview(ng-data name="image-details")

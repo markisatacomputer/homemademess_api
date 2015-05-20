@@ -1,1 +1,45 @@
 .trash { color:rgb(209, 91, 71); }
+
+@bgcolor: #999;
+ 
+.transition (...) {
+  -webkit-transition: @arguments;  
+  -moz-transition:    @arguments;
+  -ms-transition:     @arguments; 
+  -o-transition:      @arguments;
+  transition:         @arguments;
+}
+.trans-bg {
+  .transition(background-color, 0.2s, linear);
+}
+.transparent {
+  background: rgba(0,0,0,0);
+}
+.container {
+  .editor, .drop {
+    float: left;
+  }
+  .editor {
+    width: 40%;
+    min-height: 200px;
+  }
+  div.drop {
+    width: 60%;
+    padding: 20px;
+    border: solid thin @bgcolor;
+    .transparent;
+    .trans-bg();
+    form.dropzone {
+      min-height: 0;
+      border: 0;
+      padding: 0;
+      .transparent;
+      input[type="file"] { display: none; }
+      .dz-preview.dz-image-preview { 
+        background: rgba(0,0,0,0);
+        .dz-progress { display: none; }
+      }
+    }
+  }
+}
+
