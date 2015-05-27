@@ -5,7 +5,7 @@ var mongoose = require('mongoose'),
 
 var ObjectId = mongoose.Schema.Types.ObjectId
 
-var buckets = ('image.thumbnail.exif.gps.interoperability.mark').split('.');
+var buckets = ('image.thumbnail.exif.gps.interoperability.makernote.mark').split('.');
 
 var ExifSchema = new Schema({
   name: String,
