@@ -79,10 +79,11 @@ function saveExifTags(exif) {
  *    5. Return Image record for app api use
  */
 exports.index = function(req, res) {
-  var file = req.files.file;
+  var file = req.files.file; console.log(file);
   getExif(file.path).then(function (exif){
     saveExifTags(exif).then(function (exifrefs){
       var i = new Image();
+      i.filename = file.originalname;
       i.exif = exifrefs;
       i.temporary = Date.now();
       i.save(function (err) {
