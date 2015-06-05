@@ -12,8 +12,7 @@ var ExifSchema = new Schema({
   bucket: {
     type: String,
     enum: buckets
-  },
-  value: String
+  }
 });
 
 module.exports = mongoose.model('Exif', ExifSchema);

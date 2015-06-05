@@ -3,21 +3,27 @@
 var mongoose = require('mongoose'),
   Schema = mongoose.Schema;
 
-var ObjectId = mongoose.Schema.Types.ObjectId
+var ObjectId = Schema.Types.ObjectId
 
 var ImageSchema = new Schema({
   name: String,
   filename: String,
   tags: [{
-    Type: String
+    type: ObjectId,
+    ref: 'Tag'
   }],
   exif: [{
-    Type: ObjectId
+    name: { type: ObjectId, ref: 'Exif' },
+    value: String,
   }],
   original: String,
   derivative:[{
-    Type: ObjectId
-  }]
+    type: ObjectId
+  }],
+  temporary: {
+    type: Date,
+    default: Date.now()
+  }
 });
 
 module.exports = mongoose.model('Image', ImageSchema);
