@@ -16,12 +16,15 @@ var ImageSchema = new Schema({
     name: { type: ObjectId, ref: 'Exif' },
     value: String,
   }],
+  orientation: Number,
   original: String,
   derivative:[{
-    type: ObjectId
+    uri: String,
+    width: Number,
+    height: Number
   }],
   temporary: {
-    type: Date,
+    type: Number,
     default: Date.now()
   }
 });

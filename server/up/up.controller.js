@@ -3,11 +3,11 @@
 var _ = require('lodash');
 var aws = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
-var dreamObjects = new aws.S3();
 var Image = require('../api/image/image.model');
 var Exif = require('../api/exif/exif.model');
 var ExifImage = require('exif').ExifImage;
 var Q = require('q');
+
 
 // Get EXIF metadata
 function getExif(image) {
@@ -72,7 +72,7 @@ function saveExifTags(exif) {
 
 /*      Process upload
  *
- *    1. Get exif
+ *    1. CHECK Get exif
  *    2. Write to DB *tmp
  *    3. Push Original to bucket, update db w uri
  *    4. Pipe to derivatives, push to cdn bucket, update db w uri
@@ -81,18 +81,38 @@ function saveExifTags(exif) {
 exports.index = function(req, res) {
   var file = req.files.file; console.log(file);
   getExif(file.path).then(function (exif){
+    // create new image
+    var i = new Image();
+    // save orientation
+    i.orientation = exif.image.orientation;
+    // save original filename
+    i.filename = file.originalname;
+    // temporary - let's make it an hour limit
+    i.temporary = Date.now() + 3600000;
+    // now process the tags
     saveExifTags(exif).then(function (exifrefs){
-      var i = new Image();
-      i.filename = file.originalname;
       i.exif = exifrefs;
-      i.temporary = Date.now();
+      // save the image to db
       i.save(function (err) {
         if (err) {
           console.log(err);
           return res.json(200, err);
         }
+        // pass back our image
         return res.json(200, i);
       });
     });
   });
+  // the idea here is do this in parallel...
+  // upload to dreamObjects
+  var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: process.env.AWS_ACCESS_KEY_ID }});
+  var fs = require('fs');
+  var body = fs.createReadStream(file.path);
+  hmmtesting.upload({Body: body}, function(err, data) {
+    console.log(err, data);
+  });
+
+  // upload thumbs to dreamObjects
+  var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: process.env.AWS_ACCESS_KEY_ID }});
+
 };
