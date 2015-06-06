@@ -70,6 +70,23 @@ function saveExifTags(exif) {
   return deferred.promise;
 }
 
+// Upload Original to Bucket
+function upOriginal(file, id) {
+  // the idea here is do this in parallel...
+  // upload to dreamObjects
+  var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: id }});
+  var fs = require('fs');
+  var body = fs.createReadStream(file.path);
+  hmmtesting.upload({Body: body}, function(err, data) {
+    console.log(err, data);
+  });
+}
+// Upload Derivatives to Bucket
+function upDerivatives(file, id) {
+  // stream image into derivatives here
+  //var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: id/sizeKey }});
+}
+
 /*      Process upload
  *
  *    1. CHECK Get exif
@@ -82,7 +99,7 @@ exports.index = function(req, res) {
   var file = req.files.file;
   getExif(file.path).then(function (exif){
     // create new image
-    var i = new Image(); console.log(exif);
+    var i = new Image();
     // save orientation
     i.orientation = exif.image.Orientation;
     // save original filename
@@ -98,21 +115,12 @@ exports.index = function(req, res) {
           console.log(err);
           return res.json(200, err);
         }
+        // get uploads started
+        upOriginal(file, i.id);
+        upDerivatives(file, i.id);
         // pass back our image
         return res.json(200, i);
       });
     });
   });
-  // the idea here is do this in parallel...
-  // upload to dreamObjects
-  var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: process.env.AWS_ACCESS_KEY_ID }});
-  var fs = require('fs');
-  var body = fs.createReadStream(file.path);
-  hmmtesting.upload({Body: body}, function(err, data) {
-    console.log(err, data);
-  });
-
-  // upload thumbs to dreamObjects
-  var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: process.env.AWS_ACCESS_KEY_ID }});
-
 };
