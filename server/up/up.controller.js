@@ -79,12 +79,12 @@ function saveExifTags(exif) {
  *    5. Return Image record for app api use
  */
 exports.index = function(req, res) {
-  var file = req.files.file; console.log(file);
+  var file = req.files.file;
   getExif(file.path).then(function (exif){
     // create new image
-    var i = new Image();
+    var i = new Image(); console.log(exif);
     // save orientation
-    i.orientation = exif.image.orientation;
+    i.orientation = exif.image.Orientation;
     // save original filename
     i.filename = file.originalname;
     // temporary - let's make it an hour limit
