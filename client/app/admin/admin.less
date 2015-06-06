@@ -1,6 +1,7 @@
 .trash { color:rgb(209, 91, 71); }
 
 @bgcolor: #999;
+@bgcolor-ne: #666;
  
 .transition (...) {
   -webkit-transition: @arguments;  
@@ -9,6 +10,13 @@
   -o-transition:      @arguments;
   transition:         @arguments;
 }
+.rotate (@deg) {
+  -webkit-transform: rotate(@deg);
+  -moz-transform:    rotate(@deg);
+  -ms-transform:     rotate(@deg);
+  -o-transform:      rotate(@deg);
+}
+
 .trans-bg {
   .transition(background-color, 0.2s, linear);
 }
@@ -29,6 +37,7 @@
     border: solid thin @bgcolor;
     .transparent;
     .trans-bg();
+    
     form.dropzone {
       min-height: 0;
       border: 0;
@@ -39,7 +48,15 @@
         background: rgba(0,0,0,0);
         .dz-progress { display: none; }
       }
+
+      // Image rotation - http://www.daveperrett.com/images/articles/2012-07-28-exif-orientation-handling-is-a-ghetto/EXIF_Orientations.jpg
+      .dz-image.image-orientation-8 img { .rotate(-90deg); }
+      .dz-image.image-orientation-6 img { .rotate(90deg); }
+      .dz-image.image-orientation-3 img { .rotate(180deg); }
     }
   }
+  div.drop.over {  background-color: @bgcolor; }
+  div.drop.notempty {  background-color: @bgcolor; }
+  div.drop.over.notempty { background-color: @bgcolor-ne; }
 }
 

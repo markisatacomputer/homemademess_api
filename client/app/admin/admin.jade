@@ -2,7 +2,7 @@ div(ng-include='"components/navbar/navbar.html"')
 .container
 
   .editor
-    {{files | json : spacing}}
+    {{files}}
     .name
 
     .details
@@ -12,4 +12,4 @@ div(ng-include='"components/navbar/navbar.html"')
   .drop
     form.dropzone(enctype="multipart/form-data", ng-data, ng-dropzone, dropzone="dropzone", dropzone-config="dropzoneConfig")
       input(name="file", type="file", multiple)
-    form.preview(ng-data name="image-details")
+    form.dropzone(ng-data name="image-details")
