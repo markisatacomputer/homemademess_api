@@ -74,13 +74,14 @@ function saveExifTags(exif) {
 
 // Upload Original to Bucket
 function upOriginal(file, id) {
-  // the idea here is do this in parallel...
   // upload to dreamObjects
   var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: id }});
   var fs = require('fs');
   var body = fs.createReadStream(file.path);
   hmmtesting.upload({Body: body}, function(err, data) {
-    console.log(err, data);
+    if (err) { console.log(err); } else {
+      console.log('Upload successful: ', data);
+    }
   });
 }
 // Upload Derivatives to Bucket
