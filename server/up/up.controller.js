@@ -55,8 +55,10 @@ function saveExifTags(exif) {
     var exifsSaved = [];
     _(exif).forEach(function(bucket, bucketname){
       _(bucket).forEach(function(exifvalue, exifname){
-        // process the metatag and add it to our set
-        exifsSaved.push(saveExifTag({ name: exifname, bucket: bucketname }, exifvalue));
+        if (exifname !== 'error') {
+          // process the metatag and add it to our set
+          exifsSaved.push(saveExifTag({ name: exifname, bucket: bucketname }, exifvalue));
+        }
       });
     });
     // Wait for it... 
