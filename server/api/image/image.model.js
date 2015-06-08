@@ -23,6 +23,14 @@ var ImageSchema = new Schema({
     width: Number,
     height: Number
   }],
+  createDate: {
+    type: Number,
+    default: 0
+  },
+  uploadDate: {
+    type: Number,
+    default: Date.now()
+  },
   temporary: {
     type: Number,
     default: Date.now()

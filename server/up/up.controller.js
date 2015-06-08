@@ -7,6 +7,7 @@ var Image = require('../api/image/image.model');
 var Exif = require('../api/exif/exif.model');
 var ExifImage = require('exif').ExifImage;
 var Q = require('q');
+var moment = require('moment');
 
 
 // Get EXIF metadata
@@ -55,6 +56,7 @@ function saveExifTags(exif) {
     var exifsSaved = [];
     _(exif).forEach(function(bucket, bucketname){
       _(bucket).forEach(function(exifvalue, exifname){
+        // no errors please
         if (exifname !== 'error') {
           // process the metatag and add it to our set
           exifsSaved.push(saveExifTag({ name: exifname, bucket: bucketname }, exifvalue));
@@ -72,6 +74,28 @@ function saveExifTags(exif) {
   return deferred.promise;
 }
 
+// return a valid date
+function getValidDate(exif) {
+  try {
+    var acceptedExif = ['exif.DateTimeOriginal','exif.CreateDate','image.DateTimeOriginal','image.CreateDate'];
+    // find an exif create tag
+    var d = null;
+    while (!d && acceptedExif.length > 0) {
+      d = _.get(exif,acceptedExif.shift(),'yo');
+    }
+    if (d) {
+      d = d.split(/[\s:]/);
+      if (Array.isArray(d)) {
+        return Date.UTC.apply(null, d);
+      }
+    } else {
+      return 0; // Date.now();
+    }
+  } catch (e) {
+    console.log('error: ', e);
+  }
+}
+
 // Upload Original to Bucket
 function upOriginal(file, id) {
   // upload to dreamObjects
@@ -79,7 +103,9 @@ function upOriginal(file, id) {
   var fs = require('fs');
   var body = fs.createReadStream(file.path);
   hmmtesting.upload({Body: body}, function(err, data) {
-    if (err) { console.log(err); } else {
+    if (err) { 
+      console.log('Error: ', err); 
+    } else {
       console.log('Upload successful: ', data);
     }
   });
@@ -109,8 +135,11 @@ exports.index = function(req, res) {
     i.filename = file.originalname;
     // temporary - let's make it an hour limit
     i.temporary = Date.now() + 3600000;
+    // save create date if existing
+    i.createDate = getValidDate(exif);
     // now process the tags
     saveExifTags(exif).then(function (exifrefs){
+      // attach exif to image record
       i.exif = exifrefs;
       // save the image to db
       i.save(function (err) {
