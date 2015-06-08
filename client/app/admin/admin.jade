@@ -2,8 +2,8 @@ include ../includes/mixin.jade
 div(ng-include='"components/navbar/navbar.html"')
 .container
 
-  .editor.form-horizontal
-    .selected(ng-show="fileSelected.length > 0")
+  .editor.form-horizontal(ng-show="fileSelected.length > 0")
+    .selected
       label Selected Images
       .item(ng-repeat="id in fileSelected")
         span.id {{id}}

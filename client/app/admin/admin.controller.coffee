@@ -48,11 +48,20 @@ angular.module 'hmm2App'
 
   $scope.imageClick = (id, $scope) ->
     $scope.$apply () ->
+      # add/remove from selected array
       i = $scope.fileSelected.indexOf id
       if i == -1
         $scope.fileSelected.push id
       else
         $scope.fileSelected.splice i, 1
+      
+      # indicate if drop zone has selected
+      if $scope.fileSelected.length > 0
+        $ '.drop'
+        .addClass 'has-selected'
+      else
+        $ '.drop'
+        .removeClass 'has-selected'
     
   #   Dropzone Config
   $scope.dropzoneConfig = {
