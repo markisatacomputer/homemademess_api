@@ -4,6 +4,7 @@ angular.module 'hmm2App'
 .controller 'AdminCtrl', ($scope, $http, Auth, $state) ->
   $scope.files = {}
 
+  #  Dropzone Event Functions
   $scope.dragover = (event) ->
     $ 'div.drop' 
     .addClass 'over'
@@ -30,7 +31,16 @@ angular.module 'hmm2App'
     if image._id
       $ file.previewElement
       .attr 'id', image._id
+      .on 'click', (event) ->
+        id = $ event.currentTarget
+        .toggleClass 'selected'
+        .attr 'id'
+        if !$scope.fileSelected[id]
+          $scope.fileSelected.push id
+        else
+          $scope.fileSelected.splice $scope.fileSelected.indexOf id
 
+  #   Dropzone Config
   $scope.dropzoneConfig = {
     url: '/up'
     previewsContainer: 'form.dropzone[name="image-details"]'
