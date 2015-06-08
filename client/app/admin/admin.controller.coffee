@@ -40,12 +40,16 @@ angular.module 'hmm2App'
         .toggleClass 'selected'
         .attr 'id'
         #  track selected
-        i = $scope.fileSelected.indexOf id
-        if i == -1
-          $scope.fileSelected.push id
-        else
-          $scope.fileSelected.splice i, 1
+        $scope.imageClick id, $scope
 
+  $scope.imageClick = (id, $scope) ->
+    $scope.$apply () ->
+      i = $scope.fileSelected.indexOf id
+      if i == -1
+        $scope.fileSelected.push id
+      else
+        $scope.fileSelected.splice i, 1
+    
   #   Dropzone Config
   $scope.dropzoneConfig = {
     url: '/up'
