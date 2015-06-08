@@ -53,8 +53,8 @@ function saveExifTags(exif) {
   try {
     var exifref = [];
     var exifsSaved = [];
-    _(exif).forEach(function(bucket, bucketname){
-      _(bucket).forEach(function(exifvalue, exifname){
+    _.forEach(exif, function(bucket, bucketname){ 
+      _.forEach(bucket, function(exifvalue, exifname){
         // no errors please
         if (exifname !== 'error') {
           // process the metatag and add it to our set
@@ -67,7 +67,7 @@ function saveExifTags(exif) {
       deferred.resolve(exifref.concat(newexifs));
     });
   } catch (error) {
-    console.log('Error: ' + error.message);
+    console.log('Error: ' + error);
     deferred.reject(error);
   }
   return deferred.promise;
@@ -75,23 +75,19 @@ function saveExifTags(exif) {
 
 // return a valid date
 function getValidDate(exif) {
-  try {
-    var acceptedExif = ['exif.DateTimeOriginal','exif.CreateDate','image.DateTimeOriginal','image.CreateDate'];
-    // find an exif create tag
-    var d = null;
-    while (!d && acceptedExif.length > 0) {
-      d = _.get(exif,acceptedExif.shift(),'yo');
+  var acceptedExif = ['exif.DateTimeOriginal','exif.CreateDate','image.DateTimeOriginal','image.CreateDate'];
+  // find an exif create tag
+  var d = null;
+  while (!d && acceptedExif.length > 0) {
+    d = _.get(exif,acceptedExif.shift(),'yo');
+  }
+  if (d) {
+    d = d.split(/[\s:]/);
+    if (Array.isArray(d)) {
+      return Date.UTC.apply(null, d);
     }
-    if (d) {
-      d = d.split(/[\s:]/);
-      if (Array.isArray(d)) {
-        return Date.UTC.apply(null, d);
-      }
-    } else {
-      return 0; // Date.now();
-    }
-  } catch (e) {
-    console.log('error: ', e);
+  } else {
+    return 0; // Date.now();
   }
 }
 
@@ -125,18 +121,19 @@ function upDerivatives(file, id) {
  */
 exports.index = function(req, res) {
   var file = req.files.file;
+  // create new image
+  var i = new Image();
+  // save original filename
+  i.filename = file.originalname;
+  // temporary - let's make it an hour limit
+  i.temporary = Date.now() + 3600000;
+  // get exif metadata
   getExif(file.path).then(function (exif){
-    // create new image
-    var i = new Image();
     // save orientation
-    i.orientation = exif.image.Orientation;
-    // save original filename
-    i.filename = file.originalname;
-    // temporary - let's make it an hour limit
-    i.temporary = Date.now() + 3600000;
+    i.orientation = exif.image.Orientation; 
     // save create date if existing
     i.createDate = getValidDate(exif);
-    // now process the tags
+    // now process the individual exif metadata tags
     saveExifTags(exif).then(function (exifrefs){
       // attach exif to image record
       i.exif = exifrefs;
