@@ -1,7 +1,7 @@
 'use strict'
 
 angular.module 'hmm2App'
-.controller 'AdminCtrl', ($scope, $http, Auth, $state) ->
+.controller 'AdminCtrl', ($scope, $http, Auth, $state, $resource) ->
   #  Init vars
   $scope.files = {}
   $scope.fileSelected = []
@@ -62,6 +62,26 @@ angular.module 'hmm2App'
       else
         $ '.drop'
         .removeClass 'has-selected'
+
+  #  Tags
+  tags = $resource('/api/tags');
+  auto = $resource('/api/auto/:tag');
+  $scope.tagAdded = (tag) ->
+    #  create new tag if it doesn't exist
+    if !tag._id
+      newTag = new tags(tag)
+      newTag.$save (saved) ->
+        angular.extend tag, saved
+        $scope.addTagtoSelected tag
+  $scope.tagRemoved = (tag) ->
+    # stuff here
+
+  $scope.findTags = (query) ->
+    return auto.query().$promise
+
+  $scope.addTagtoSelected = (tag) ->
+    angular.forEach $scope.fileSelected, (id, key) ->
+      $scope.files[id].tags.push tag._id
     
   #   Dropzone Config
   $scope.dropzoneConfig = {

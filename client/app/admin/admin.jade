@@ -14,11 +14,14 @@ div(ng-include='"components/navbar/navbar.html"')
     .description
       +inputWrap("Description")
         textarea.form-control(placeholder="description", ng-model="imageDesc", title="Description", rows="3")
-    .tags
+    .tagz
       +inputWrap("Tags")
         tags-input(ng-model="tags", title="Tags", replace-spaces-with-dashes="false", on-tag-added="tagAdded($tag)", on-tag-removed="tagRemoved($tag)")
+          auto-complete(source="findTags($query)")
+    .debug
+      {{tags | json}}
 
-      {{tags}}
+      {{files | json}} 
   
   .drop
     form.dropzone(enctype="multipart/form-data", ng-data, ng-dropzone, dropzone="dropzone", dropzone-config="dropzoneConfig")
