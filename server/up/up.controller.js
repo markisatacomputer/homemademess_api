@@ -7,7 +7,6 @@ var Image = require('../api/image/image.model');
 var Exif = require('../api/exif/exif.model');
 var ExifImage = require('exif').ExifImage;
 var Q = require('q');
-var moment = require('moment');
 
 
 // Get EXIF metadata
