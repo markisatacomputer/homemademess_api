@@ -1,13 +1,14 @@
 'use strict'
 
 angular.module 'hmm2App', [
-  'ngCookies',
-  'ngResource',
-  'ngSanitize',
-  'btford.socket-io',
-  'ui.router',
-  'ui.bootstrap',
+  'ngCookies'
+  'ngResource'
+  'ngSanitize'
+  'btford.socket-io'
+  'ui.router'
+  'ui.bootstrap'
   'ngDropzone'
+  'ngTagsInput'
 ]
 .config ($stateProvider, $urlRouterProvider, $locationProvider, $httpProvider) ->
   $urlRouterProvider
