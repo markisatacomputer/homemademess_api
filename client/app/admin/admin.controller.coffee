@@ -2,7 +2,7 @@
 
 angular.module 'hmm2App'
 .controller 'AdminCtrl', ($scope, $http, Auth, $state) ->
-  $scope.files = []
+  $scope.files = {}
 
   $scope.dragover = (event) ->
     $ 'div.drop' 
@@ -22,11 +22,14 @@ angular.module 'hmm2App'
     # more here
   $scope.success = (file, res) ->
     image = angular.extend {}, file, res
-    $scope.files.push image
+    $scope.files[image._id] = image
     if image.orientation
       $ file.previewElement 
       .find '.dz-image'
       .addClass 'image-orientation-' + image.orientation
+    if image._id
+      $ file.previewElement
+      .attr 'id', image._id
 
   $scope.dropzoneConfig = {
     url: '/up'
