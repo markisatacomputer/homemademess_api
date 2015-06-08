@@ -3,6 +3,7 @@
 angular.module 'hmm2App'
 .controller 'AdminCtrl', ($scope, $http, Auth, $state) ->
   $scope.files = {}
+  $scope.fileSelected = []
 
   #  Dropzone Event Functions
   $scope.dragover = (event) ->
@@ -24,21 +25,26 @@ angular.module 'hmm2App'
   $scope.success = (file, res) ->
     image = angular.extend {}, file, res
     $scope.files[image._id] = image
+    #  Image orientation class
     if image.orientation
       $ file.previewElement 
       .find '.dz-image'
       .addClass 'image-orientation-' + image.orientation
+    #  Select actions
     if image._id
       $ file.previewElement
       .attr 'id', image._id
       .on 'click', (event) ->
+        #  toggle class
         id = $ event.currentTarget
         .toggleClass 'selected'
         .attr 'id'
-        if !$scope.fileSelected[id]
+        #  track selected
+        i = $scope.fileSelected.indexOf id
+        if i == -1
           $scope.fileSelected.push id
         else
-          $scope.fileSelected.splice $scope.fileSelected.indexOf id
+          $scope.fileSelected.splice i, 1
 
   #   Dropzone Config
   $scope.dropzoneConfig = {
