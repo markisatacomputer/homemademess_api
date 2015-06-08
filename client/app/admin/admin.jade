@@ -1,15 +1,25 @@
+include ../includes/mixin.jade
 div(ng-include='"components/navbar/navbar.html"')
 .container
 
-  .editor
-    {{fileSelected}}
-
+  .editor.form-horizontal
+    .selected(ng-show="fileSelected.length > 0")
+      label Selected Images
+      .item(ng-repeat="id in fileSelected")
+        span.id {{id}}
+    
     .name
-
-    .details
-
+      +inputWrap("Image Title")
+        input.form-control(type="text", placeholder="image title", ng-model="imageTitle", title="Image Title")
+    .description
+      +inputWrap("Description")
+        textarea.form-control(placeholder="description", ng-model="imageDesc", title="Description", rows="3")
     .tags
+      +inputWrap("Tags")
+        tags-input(ng-model="tags", title="Tags")
 
+      {{tags}}
+  
   .drop
     form.dropzone(enctype="multipart/form-data", ng-data, ng-dropzone, dropzone="dropzone", dropzone-config="dropzoneConfig")
       input(name="file", type="file", multiple)

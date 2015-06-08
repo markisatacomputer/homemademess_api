@@ -2,8 +2,12 @@
 
 angular.module 'hmm2App'
 .controller 'AdminCtrl', ($scope, $http, Auth, $state) ->
+  #  Init vars
   $scope.files = {}
   $scope.fileSelected = []
+  $scope.imageTitle = ''
+  $scope.imageDesc = ''
+  $scope.tags
 
   #  Dropzone Event Functions
   $scope.dragover = (event) ->
