@@ -16,7 +16,7 @@ div(ng-include='"components/navbar/navbar.html"')
         textarea.form-control(placeholder="description", ng-model="imageDesc", title="Description", rows="3")
     .tags
       +inputWrap("Tags")
-        tags-input(ng-model="tags", title="Tags", replaceSpacesWithDashes="false")
+        tags-input(ng-model="tags", title="Tags", replace-spaces-with-dashes="false", on-tag-added="tagAdded($tag)", on-tag-removed="tagRemoved($tag)")
 
       {{tags}}
   
