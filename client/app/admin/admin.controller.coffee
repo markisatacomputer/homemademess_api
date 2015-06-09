@@ -8,6 +8,9 @@ angular.module 'hmm2App'
   $scope.imageTitle = ''
   $scope.imageDesc = ''
   $scope.tags
+  $scope.allTags = {}
+  Tags = $resource('/api/tags');
+  Auto = $resource('/api/auto/:tag');
 
   #  Dropzone Event Functions
   $scope.dragover = (event) ->
@@ -24,8 +27,6 @@ angular.module 'hmm2App'
     else
       #$('div.dz-message').show()
       $('div.drop').addClass 'notempty'
-  $scope.thumbnail = (file, datauri) ->
-    # more here
   $scope.success = (file, res) ->
     image = angular.extend {}, file, res
     $scope.files[image._id] = image
@@ -34,7 +35,7 @@ angular.module 'hmm2App'
       $ file.previewElement 
       .find '.dz-image'
       .addClass 'image-orientation-' + image.orientation
-    #  Select actions
+    #  Select listener
     if image._id
       $ file.previewElement
       .attr 'id', image._id
@@ -45,6 +46,8 @@ angular.module 'hmm2App'
         .attr 'id'
         #  track selected
         $scope.imageClick id, $scope
+        #  keep editor current
+        $scope.updateEditor()
 
   $scope.imageClick = (id, $scope) ->
     $scope.$apply () ->
@@ -63,26 +66,52 @@ angular.module 'hmm2App'
         $ '.drop'
         .removeClass 'has-selected'
 
-  #  Tags
-  tags = $resource('/api/tags');
-  auto = $resource('/api/auto/:tag');
+  $scope.updateEditor = () ->
+    $scope.$apply () ->
+      $scope.tags = $scope.getTagsFromSelected()
+
+  #  Tag-Input Events
   $scope.tagAdded = (tag) ->
     #  create new tag if it doesn't exist
     if !tag._id
-      newTag = new tags(tag)
+      newTag = new Tags(tag)
       newTag.$save (saved) ->
         angular.extend tag, saved
         $scope.addTagtoSelected tag
+        $scope.allTags[tag._id] = tag
   $scope.tagRemoved = (tag) ->
-    # stuff here
+    $scope.removeTagFromSelected tag
 
+  #  Autocomplete
   $scope.findTags = (query) ->
-    return auto.query().$promise
+    return Auto.query().$promise
 
   $scope.addTagtoSelected = (tag) ->
     angular.forEach $scope.fileSelected, (id, key) ->
       $scope.files[id].tags.push tag._id
-    
+  $scope.getTagsFromSelected = () ->
+    uniq = {}
+    #  get all tags from all selected Images
+    angular.forEach $scope.fileSelected, (id, key) ->
+      #  no repeats allowed
+      uniq[key] = 1 for key in $scope.files[id].tags
+    tags = Object.keys(uniq)
+
+    #  transform each id to it's full object
+    angular.forEach tags, (id, key) ->
+      if $scope.allTags[id]
+        tags[key] = $scope.allTags[id]
+      else
+        console.log 'Error: Somehow a tag was lost...'
+        tags.splice key, 1
+    return tags
+  $scope.removeTagFromSelected = (tag) ->
+    #  make sure our records don't save these tags to the db
+    angular.forEach $scope.fileSelected, (id, key) ->
+      i = $scope.files[id].tags.indexOf tag._id
+      if i > -1
+        $scope.files[id].tags.splice i, 1
+
   #   Dropzone Config
   $scope.dropzoneConfig = {
     url: '/up'
@@ -97,7 +126,6 @@ angular.module 'hmm2App'
       this.on 'drop', $scope.dragleave
       this.on 'addedfile', $scope.filechange
       this.on 'removedfile', $scope.filechange
-      this.on 'thumbnail', $scope.thumbnail
       this.on 'success', $scope.success
       $scope.dz = this
   }
