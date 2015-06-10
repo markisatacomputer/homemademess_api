@@ -10,7 +10,7 @@ angular.module 'hmm2App'
   $scope.tags
   $scope.allTags = {}
   Tags = $resource('/api/tags');
-  Auto = $resource('/api/auto/:tag');
+  Auto = $resource('/api/auto');
 
   #  Dropzone Event Functions
   $scope.dragover = (event) ->
@@ -130,7 +130,7 @@ angular.module 'hmm2App'
 
   #  Autocomplete
   $scope.findTags = (query) ->
-    return Auto.query().$promise
+    return Auto.query(query).$promise
 
   $scope.addTagtoSelected = (tag) ->
     angular.forEach $scope.fileSelected, (id, key) ->

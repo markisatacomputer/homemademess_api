@@ -7,5 +7,4 @@ var router = express.Router();
 
 router.get('/', controller.autocomplete);
 
-
 module.exports = router;
