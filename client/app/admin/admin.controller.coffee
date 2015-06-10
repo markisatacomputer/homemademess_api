@@ -1,7 +1,7 @@
 'use strict'
 
 angular.module 'hmm2App'
-.controller 'AdminCtrl', ($scope, $http, Auth, $state, $resource) ->
+.controller 'AdminCtrl', ($scope, $http, Auth, $state, $resource, $q) ->
   #  Init vars
   $scope.files = {}
   $scope.fileSelected = []
@@ -49,6 +49,7 @@ angular.module 'hmm2App'
         #  keep editor current
         $scope.updateEditor()
 
+  #  Image Selection
   $scope.imageClick = (id, $scope) ->
     $scope.$apply () ->
       # add/remove from selected array
@@ -66,10 +67,55 @@ angular.module 'hmm2App'
         $ '.drop'
         .removeClass 'has-selected'
 
+  #  Check if all the selected images have the same value for an attribue
+  allSame = (attr) ->
+    # we must return a promise here - must have something to do with angular.forEach
+    return $q (resolve, reject) ->
+      value = 0
+      angular.forEach $scope.fileSelected, (id, key) ->
+        if value == 0
+          value = $scope.files[id][attr]
+        if value != $scope.files[id][attr]
+          resolve false
+      resolve true
+  #  Keep Editor view updated
   $scope.updateEditor = () ->
     $scope.$apply () ->
       $scope.tags = $scope.getTagsFromSelected()
+      #  Nothing selected - make em empty
+      if $scope.fileSelected.length == 0
+        $scope.imageTitle = ''
+        $scope.imageDesc = ''
+      #  One selected - use it's values
+      if $scope.fileSelected.length == 1
+        $scope.imageTitle = $scope.files[$scope.fileSelected[0]].name
+        $scope.imageDesc = $scope.files[$scope.fileSelected[0]].description
+      #  Multiple selected - if they're the same us that value
+      if $scope.fileSelected.length > 1
+        allSame 'name'
+        .then (s) ->
+          if s
+            $scope.imageTitle = $scope.files[$scope.fileSelected[0]].name;
+          if !s
+            $scope.imageTitle = ''
+        allSame 'description'
+        .then (s) ->
+          if s
+            $scope.imageDesc = $scope.files[$scope.fileSelected[0]].description;
+          if !s
+            $scope.imageDesc = ''
+      
 
+  #  Write Name and Description to selected images
+  $scope.$watch 'imageTitle', (newValue, oldValue) ->
+    if newValue != oldValue and newValue != ''
+      angular.forEach $scope.fileSelected, (id, key) ->
+        $scope.files[id].name = newValue
+  $scope.$watch 'imageDesc', (newValue, oldValue) ->
+    if newValue != oldValue and newValue != ''
+      angular.forEach $scope.fileSelected, (id, key) ->
+        $scope.files[id].description = newValue
+  
   #  Tag-Input Events
   $scope.tagAdded = (tag) ->
     #  create new tag if it doesn't exist

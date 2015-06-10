@@ -7,6 +7,7 @@ var ObjectId = Schema.Types.ObjectId
 
 var ImageSchema = new Schema({
   name: String,
+  description: String,
   filename: String,
   tags: [{
     type: ObjectId,
