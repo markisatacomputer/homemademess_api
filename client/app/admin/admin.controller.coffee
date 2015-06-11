@@ -28,7 +28,7 @@ angular.module 'hmm2App'
       #$('div.dz-message').show()
       $('div.drop').addClass 'notempty'
   $scope.success = (file, res) ->
-    image = angular.extend {}, file, res
+    image = res
     $scope.files[image._id] = image
     #  Image orientation class
     if image.orientation
