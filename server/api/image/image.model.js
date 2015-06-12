@@ -18,6 +18,8 @@ var ImageSchema = new Schema({
     value: String,
   }],
   orientation: Number,
+  width: Number,
+  height: Number,
   original: String,
   derivative:[{
     uri: String,
