@@ -7,7 +7,7 @@ var Image = require('../api/image/image.model');
 var Exif = require('../api/exif/exif.model');
 var ExifImage = require('exif').ExifImage;
 var Q = require('q');
-
+var gm = require('gm');
 
 // Get EXIF metadata
 function getExif(image) {
@@ -56,7 +56,7 @@ function saveExifTags(exif) {
     _.forEach(exif, function(bucket, bucketname){ 
       _.forEach(bucket, function(exifvalue, exifname){
         // no errors please
-        if (exifname !== 'error') {
+        if (exifname !== 'error' && exifname !== 'makernote') {
           // process the metatag and add it to our set
           exifsSaved.push(saveExifTag({ name: exifname, bucket: bucketname }, exifvalue));
         }
@@ -91,24 +91,80 @@ function getValidDate(exif) {
   }
 }
 
+// Log object upload result
+function logObjectUpload(err, data) {
+  if (err) { 
+    console.log('Error: ', err); 
+  } else {
+    console.log('Upload successful: ', data);
+  }
+}
+
 // Upload Original to Bucket
 function upOriginal(file, id) {
-  // upload to dreamObjects
+  // set original bucket
   var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: id }});
   var fs = require('fs');
-  var body = fs.createReadStream(file.path);
-  hmmtesting.upload({Body: body}, function(err, data) {
-    if (err) { 
-      console.log('Error: ', err); 
-    } else {
-      console.log('Upload successful: ', data);
-    }
-  });
+  var body = fs.createReadStream(file);
+  hmmtesting.upload({Body: body}, logObjectUpload(err, data) );
 }
+
 // Upload Derivatives to Bucket
-function upDerivatives(file, id) {
-  // stream image into derivatives here
-  //var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: id/sizeKey }});
+function upDerivatives(file, IMG) {
+  var deferred = Q.defer();
+  //  all size w, h
+  var sizes = {
+    sm:[400,600],
+    md:[800,1200],
+    lg:[1200,1600]
+  };
+  // pipe each thumb size to object
+  _.forEach(sizes, function(thumbSize, sizeKey) {
+    exports.imageOrient(file).then( function(size, err) {
+      var img = gm(file+'-oriented');
+      // image is vertical we use height
+      if (size.width < size.height) {
+        img.resize(null,thumbSize[1]);
+      // image is horizontal or square we use width
+      } else {
+        img.resize(thumbSize[0]);
+      }
+      img.compress('JPEG').quality(60).stream(function (err, stdout, stderr) {
+        //  set thumb bucket
+        var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: IMG.id+'/'+sizeKey+'.jpg' }});
+        hmmtestthumb.upload({Body: stdout}, function(err, data) {
+          // write to db
+          // log
+          logObjectUpload(err, data);
+          // cleanup - needs to happen in the promise.then down below
+        });
+      });
+    });
+  });
+
+  return deferred.promise;
+}
+
+exports.imageOrient = function(file) {
+  var size = 0;
+  var deferred = Q.defer();
+  var path = file+'-oriented';
+  // write oriented image
+  gm(file).autoOrient().write(path, function(err, stdout, stderr, command){
+    // log errors
+    if (err) { deferred.reject(err); }
+    if (stderr) { deferred.reject(stderr); }
+    // return size of autoOriented image
+    gm(path).size(function(err, value) {
+      if (value) {
+        deferred.resolve(value);
+      } else {
+        deferred.reject(err);
+      }
+    });
+  })
+  
+  return deferred.promise;
 }
 
 /*      Process upload
@@ -144,8 +200,8 @@ exports.index = function(req, res) {
           return res.json(200, err);
         }
         // get uploads started
-        upOriginal(file, i.id);
-        upDerivatives(file, i.id);
+        upOriginal(file.path, i.id);
+        upDerivatives(file.path, i);
         // pass back our image
         return res.json(200, i);
       });
