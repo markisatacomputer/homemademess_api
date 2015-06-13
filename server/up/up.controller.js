@@ -106,7 +106,7 @@ function upOriginal(file, id) {
   var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: id }});
   var fs = require('fs');
   var body = fs.createReadStream(file);
-  hmmtesting.upload({Body: body}, logObjectUpload(err, data) );
+  hmmtesting.upload({Body: body}, logObjectUpload);
 }
 
 // Upload Derivatives to Bucket
@@ -114,26 +114,47 @@ function upDerivatives(file, IMG) {
   var deferred = Q.defer();
   //  all size w, h
   var sizes = {
-    sm:[400,600],
-    md:[800,1200],
-    lg:[1200,1600]
+    sm:[300,600],
+    md:[600,1200],
+    lg:[800,1600]
   };
   // pipe each thumb size to object
   _.forEach(sizes, function(thumbSize, sizeKey) {
     exports.imageOrient(file).then( function(size, err) {
+      // save orientation fixed dimensions to file
+      IMG.width = size.width;
+      IMG.height = size.height;
+      // use orientation fixed file to determine size
       var img = gm(file+'-oriented');
       // image is vertical we use height
       if (size.width < size.height) {
+        // resize
         img.resize(null,thumbSize[1]);
+        // store measurements for db
+        var d = {height: thumbSize[1]};
+        d.width = (thumbSize[1]/size.height)*size.width;
       // image is horizontal or square we use width
       } else {
-        img.resize(thumbSize[0]);
+        // resize
+        img.resize(null, thumbSize[0]);
+        // store measurements for db
+        var d = {height: thumbSize[0]};
+        d.width = (thumbSize[0]/size.height)*size.width;
       }
+
       img.compress('JPEG').quality(60).stream(function (err, stdout, stderr) {
         //  set thumb bucket
-        var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: IMG.id+'/'+sizeKey+'.jpg' }});
+        var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: IMG.id+'/'+sizeKey+'.jpg', ACL: "public-read" }});
+        //  stream to object
         hmmtestthumb.upload({Body: stdout}, function(err, data) {
-          // write to db
+          //  write to db
+          var d = {uri: data.Location};
+          IMG.derivative.push(d);
+          IMG.save(function(err){
+            if (err) {
+              console.log('Error writing derivative to db: ', err);
+            }
+          });
           // log
           logObjectUpload(err, data);
           // cleanup - needs to happen in the promise.then down below
@@ -186,7 +207,7 @@ exports.index = function(req, res) {
   // get exif metadata
   getExif(file.path).then(function (exif){
     // save orientation
-    i.orientation = exif.image.Orientation; 
+    i.orientation = exif.image.Orientation;
     // save create date if existing
     i.createDate = getValidDate(exif);
     // now process the individual exif metadata tags
