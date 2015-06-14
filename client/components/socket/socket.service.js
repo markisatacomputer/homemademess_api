@@ -85,7 +85,7 @@ angular.module('hmm2App')
             event = 'created';
           }
           obj[item._id] = item;
-          cb(event, item, array);
+          cb(event, item, obj);
         });
 
         /*
@@ -95,7 +95,7 @@ angular.module('hmm2App')
           var event;
           event = 'deleted';
           delete obj[item._id];
-          cb(event, item, array);
+          cb(event, item, obj);
         });
       },
 
