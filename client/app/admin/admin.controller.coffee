@@ -125,6 +125,11 @@ angular.module 'hmm2App'
         angular.extend tag, saved
         $scope.addTagtoSelected tag
         $scope.allTags[tag._id] = tag
+    #  save existing tag to model and allTags
+    else
+      $scope.addTagtoSelected tag
+      $scope.allTags[tag._id] = tag
+
   $scope.tagRemoved = (tag) ->
     $scope.removeTagFromSelected tag
 
