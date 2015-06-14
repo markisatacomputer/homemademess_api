@@ -56,7 +56,7 @@ function saveExifTags(exif) {
     _.forEach(exif, function(bucket, bucketname){ 
       _.forEach(bucket, function(exifvalue, exifname){
         // no errors please
-        if (exifname !== 'error' && exifname !== 'makernote') {
+        if (exifname !== 'error' && exifname !== 'MakerNote') {
           // process the metatag and add it to our set
           exifsSaved.push(saveExifTag({ name: exifname, bucket: bucketname }, exifvalue));
         }
