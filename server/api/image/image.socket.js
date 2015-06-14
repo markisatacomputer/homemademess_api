@@ -4,16 +4,16 @@
 
 'use strict';
 
-var thing = require('./image.model');
+var image = require('./image.model');
 
 exports.register = function(socket) {
-  thing.schema.post('save', function (doc) {
+  image.schema.post('save', function (doc) {
     onSave(socket, doc);
   });
-  thing.schema.post('update', function (doc) {
+  image.schema.post('update', function (doc) {
     onUpdate(socket, doc);
   });
-  thing.schema.post('remove', function (doc) {
+  image.schema.post('remove', function (doc) {
     onRemove(socket, doc);
   });
 }
