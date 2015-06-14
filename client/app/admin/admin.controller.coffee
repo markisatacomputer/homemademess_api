@@ -1,7 +1,7 @@
 'use strict'
 
 angular.module 'hmm2App'
-.controller 'AdminCtrl', ($scope, $http, Auth, $state, $resource, $q) ->
+.controller 'AdminCtrl', ($scope, Auth, $state, $resource, $q) ->
   #  Init vars
   $scope.files = {}
   $scope.fileSelected = []
