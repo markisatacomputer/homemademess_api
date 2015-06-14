@@ -10,6 +10,9 @@ exports.register = function(socket) {
   thing.schema.post('save', function (doc) {
     onSave(socket, doc);
   });
+  thing.schema.post('update', function (doc) {
+    onUpdate(socket, doc);
+  });
   thing.schema.post('remove', function (doc) {
     onRemove(socket, doc);
   });
@@ -18,7 +21,9 @@ exports.register = function(socket) {
 function onSave(socket, doc, cb) {
   socket.emit('image:save', doc);
 }
-
+function onUpdate(socket, doc, cb) {
+  socket.emit('image:update', doc);
+}
 function onRemove(socket, doc, cb) {
   socket.emit('image:remove', doc);
 }

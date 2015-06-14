@@ -1,7 +1,7 @@
 'use strict'
 
 angular.module 'hmm2App'
-.controller 'AdminCtrl', ($scope, Auth, $state, $resource, $q) ->
+.controller 'AdminCtrl', ($scope, Auth, $state, $resource, socket, $q) ->
   #  Init vars
   $scope.files = {}
   $scope.fileSelected = []
@@ -27,9 +27,14 @@ angular.module 'hmm2App'
     else
       #$('div.dz-message').show()
       $('div.drop').addClass 'notempty'
+  
+  #  Image successfully added to dropzone and processed by upload api
   $scope.success = (file, res) ->
+    #  Add image to model and watch
     image = res
     $scope.files[image._id] = image
+    socket.syncUpdatesObj 'image', $scope.files
+
     #  Image orientation class
     if image.orientation
       $ file.previewElement 

@@ -61,6 +61,44 @@ angular.module('hmm2App')
         });
       },
 
+      /*
+      Register listeners to sync an array with updates on a model
+      
+      Takes the array we want to sync, the model name that socket updates are sent from,
+      and an optional callback function after new items are updated.
+      
+      @param {String} modelName
+      @param {Object} obj
+      @param {Function} cb
+       */
+      syncUpdatesObj: function(modelName, obj, cb) {
+        cb = cb || angular.noop;
+        /*
+        Syncs item creation/updates on 'model:save'
+         */
+        socket.on(modelName + ':save', function(item) {
+          var event;
+          console.log(':save', item);
+          if (obj[item._id]) {
+            event = 'updated';
+          } else {
+            event = 'created';
+          }
+          obj[item._id] = item;
+          cb(event, item, array);
+        });
+
+        /*
+        Syncs removed items on 'model:remove'
+         */
+        return socket.on(modelName + ':remove', function(item) {
+          var event;
+          event = 'deleted';
+          delete obj[item._id];
+          cb(event, item, array);
+        });
+      },
+
       /**
        * Removes listeners for a models updates on the socket
        *
