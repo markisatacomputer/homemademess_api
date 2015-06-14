@@ -132,14 +132,14 @@ function upDerivatives(file, IMG) {
         img.resize(null,thumbSize[1]);
         // store measurements for db
         var d = {height: thumbSize[1]};
-        d.width = (thumbSize[1]/size.height)*size.width;
+        d.width = Math.round((thumbSize[1]/size.height)*size.width);
       // image is horizontal or square we use width
       } else {
         // resize
         img.resize(null, thumbSize[0]);
         // store measurements for db
         var d = {height: thumbSize[0]};
-        d.width = (thumbSize[0]/size.height)*size.width;
+        d.width = Math.round((thumbSize[0]/size.height)*size.width);
       }
 
       img.compress('JPEG').quality(60).stream(function (err, stdout, stderr) {
@@ -148,7 +148,7 @@ function upDerivatives(file, IMG) {
         //  stream to object
         hmmtestthumb.upload({Body: stdout}, function(err, data) {
           //  write to db
-          var d = {uri: data.Location};
+          d.uri = data.Location;
           IMG.derivative.push(d);
           IMG.save(function(err){
             if (err) {
