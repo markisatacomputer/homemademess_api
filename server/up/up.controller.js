@@ -101,12 +101,26 @@ function logObjectUpload(err, data) {
 }
 
 // Upload Original to Bucket
-function upOriginal(file, id) {
+function upOriginal(file, IMG) {
   // set original bucket
-  var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: id }});
+  var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: IMG.id }});
   var fs = require('fs');
   var body = fs.createReadStream(file);
-  hmmtesting.upload({Body: body}, logObjectUpload);
+  hmmtesting.upload({Body: body}, function(err, data) {
+    //  save uploadDate to db - socket should notify so uploader can validate
+    if (data) {
+      IMG.uploadDate = Date.now();
+      IMG.save(logSave);
+    }
+    logObjectUpload(err, data);
+  });
+}
+
+// Log db save error
+function logSave(err) {
+  if (err) {
+    console.log('Error writing derivative to db: ', err);
+  }
 }
 
 // Upload Derivatives to Bucket
@@ -150,11 +164,7 @@ function upDerivatives(file, IMG) {
           //  write to db
           d.uri = data.Location;
           IMG.derivative.push(d);
-          IMG.save(function(err){
-            if (err) {
-              console.log('Error writing derivative to db: ', err);
-            }
-          });
+          IMG.save(logSave);
           // log
           logObjectUpload(err, data);
           // cleanup - needs to happen in the promise.then down below
@@ -221,7 +231,7 @@ exports.index = function(req, res) {
           return res.json(200, err);
         }
         // get uploads started
-        upOriginal(file.path, i.id);
+        upOriginal(file.path, i);
         upDerivatives(file.path, i);
         // pass back our image
         return res.json(200, i);
