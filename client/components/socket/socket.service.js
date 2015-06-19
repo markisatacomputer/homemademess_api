@@ -78,7 +78,6 @@ angular.module('hmm2App')
          */
         socket.on(modelName + ':save', function(item) {
           var event;
-          console.log(':save', item);
           if (obj[item._id]) {
             event = 'updated';
           } else {
