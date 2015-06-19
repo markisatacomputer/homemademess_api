@@ -62,9 +62,9 @@ angular.module('hmm2App')
       },
 
       /*
-      Register listeners to sync an array with updates on a model
+      Register listeners to sync an object with updates on a model
       
-      Takes the array we want to sync, the model name that socket updates are sent from,
+      Takes the object we want to sync, the model name that socket updates are sent from,
       and an optional callback function after new items are updated.
       
       @param {String} modelName
@@ -95,6 +95,38 @@ angular.module('hmm2App')
           var event;
           event = 'deleted';
           delete obj[item._id];
+          cb(event, item, obj);
+        });
+      },
+
+      /*
+      Register listeners to sync an array with updates on a model
+      
+      Takes the array we want to sync, the model name that socket updates are sent from,
+      and an optional callback function after new items are updated.
+      
+      @param {String} id
+      @param {Object} obj
+      @param {Function} cb
+       */
+      syncUploadProgress: function(id, obj, cb) {
+        cb = cb || angular.noop;
+        /*
+        Syncs original upload progress on 'id:progress'
+         */
+        socket.on(id+':progress', function(item) {
+          var event = 'progress';
+          obj[id] = item;
+          cb(event, item, obj);
+        });
+
+        /*
+        Syncs removed items on 'id:complete'
+         */
+        return socket.on(id + ':complete', function(item) {
+          var event;
+          event = 'complete';
+          obj[id] = 100;//delete obj[id];
           cb(event, item, obj);
         });
       },

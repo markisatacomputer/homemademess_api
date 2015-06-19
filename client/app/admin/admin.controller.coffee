@@ -4,6 +4,7 @@ angular.module 'hmm2App'
 .controller 'AdminCtrl', ($scope, Auth, $state, $resource, socket, $q) ->
   #  Init vars
   $scope.files = {}
+  $scope.filesInProgress = {}
   $scope.fileSelected = []
   $scope.imageTitle = ''
   $scope.imageDesc = ''
@@ -32,8 +33,10 @@ angular.module 'hmm2App'
   $scope.success = (file, res) ->
     #  Add image to model and watch
     image = res
+    imageId = if image.id then image.id else image._id
     $scope.files[image._id] = image
     socket.syncUpdatesObj 'image', $scope.files
+    socket.syncUploadProgress imageId, $scope.filesInProgress
 
     #  Image orientation class
     if image.orientation
