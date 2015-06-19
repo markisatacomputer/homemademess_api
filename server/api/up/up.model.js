@@ -40,8 +40,8 @@ Upload.prototype.S3 = function() {
   var percent = 0;
   S3.on('httpUploadProgress', function(progress){
     // check to make sure progress has changed significantly
-    var rightnow = Math.round(progress.loaded/progress.total);
-    var acceptableProgress = process.env.ACCEPTABLE_PROGRESS;
+    var rightnow = Math.round((progress.loaded/progress.total)*100);
+    var acceptableProgress = Number(process.env.ACCEPTABLE_PROGRESS);
     if ((rightnow - percent) > acceptableProgress) {
       //  pass on progress event to server for socket
       self.emit('S3Progress', self.id, rightnow);

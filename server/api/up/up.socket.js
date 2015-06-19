@@ -8,11 +8,10 @@ var Upload = require('./up.model');
 var UpListener = require('./up.listener');
 
 exports.register = function(socket) {
-  UpListener.on('S3Progress', function(progress, id){
-    console.log(progress, id);
+  UpListener.on('S3Progress', function(id, progress){
     socket.emit(id+':progress', progress);
   });
-  UpListener.on('S3UploadEnd', function(end, id) {
+  UpListener.on('S3UploadEnd', function(id, end) {
     socket.emit(id+':end', end);
   });
 }
