@@ -3,6 +3,8 @@
 var _ = require('lodash');
 var aws = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
+var Upload = require('./up.model');
+var UpListener = require('./up.listener');
 var Image = require('../api/image/image.model');
 var Exif = require('../api/exif/exif.model');
 var ExifImage = require('exif').ExifImage;
@@ -98,22 +100,6 @@ function logObjectUpload(err, data) {
   } else {
     console.log('Upload successful: ', data);
   }
-}
-
-// Upload Original to Bucket
-function upOriginal(file, IMG) {
-  // set original bucket
-  var hmmtesting = new aws.S3({params: {Bucket: process.env.AWS_ORIGINAL_BUCKET, Key: IMG.id }});
-  var fs = require('fs');
-  var body = fs.createReadStream(file);
-  hmmtesting.upload({Body: body}, function(err, data) {
-    //  save uploadDate to db - socket should notify so uploader can validate
-    if (data) {
-      IMG.uploadDate = Date.now();
-      IMG.save(logSave);
-    }
-    logObjectUpload(err, data);
-  });
 }
 
 // Log db save error
@@ -230,8 +216,16 @@ exports.index = function(req, res) {
           console.log(err);
           return res.json(200, err);
         }
-        // get uploads started
-        upOriginal(file.path, i);
+        //  get uploads started
+        var up = new Upload(file.path, i);
+        //  attach listener
+        up.on('S3Progress', function (id, progress) {
+          UpListener.emit('S3Progress', id, progress);
+        }).on('S3UploadEnd', function (id, end) {
+          UpListener.emit('S3UploadEnd', id, end);
+        });
+        up.send();
+        //  send derivatives
         upDerivatives(file.path, i);
         // pass back our image
         return res.json(200, i);
