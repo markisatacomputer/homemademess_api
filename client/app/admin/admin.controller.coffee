@@ -1,21 +1,11 @@
 'use strict'
 
 angular.module 'hmm2App'
-.controller 'AdminCtrl', ($scope, Auth, $state, $resource, socket, $q) ->
-  #  Init vars
-  $scope.files = {}
-  $scope.filesInProgress = {}
-  $scope.fileSelected = []
-  $scope.imageTitle = ''
-  $scope.imageDesc = ''
-  $scope.tags
-  $scope.allTags = {}
-  Tags = $resource('/api/tags');
-  Auto = $resource('/api/auto');
-  
+.controller 'AdminCtrl', ($scope, Auth, $state, $resource, socket, $q) ->  
   ###
         DROPZONE
   ###
+  
   #   Config
   $scope.dropzoneConfig = {
     url: '/up'
@@ -43,10 +33,8 @@ angular.module 'hmm2App'
   $scope.filechange = (file) ->
     images = $('div.drop form[name="image-details"]').children()
     if $.isEmptyObject images
-      #$('div.dz-message').hide()
       $('div.drop').removeClass 'notempty'
     else
-      #$('div.dz-message').show()
       $('div.drop').addClass 'notempty'
   #  Image successfully added to dropzone and processed by upload api
   $scope.success = (file, res) ->
@@ -75,9 +63,42 @@ angular.module 'hmm2App'
         $scope.imageClick id, $scope
         #  keep editor current
         $scope.updateEditor()
+  
+  #  Update S3 upload Progress
+  $scope.$watchCollection 'filesInProgress', (newValues, oldValues) ->
+    angular.forEach newValues, (progress, key) ->
+      # insert progress bar if nonexistant
+      if !oldValues[key]
+        $ '#'+key
+        .addClass 'inProgress'
+        .prepend '<div class="s3progress"><p class="percentage"></p></div>'
+      
+      # update percentage
+      $ '#'+key+' .s3progress .percentage'
+      .text progress+'%'
+      
+      # complete
+      if progress == 100
+        $ '#'+key 
+        .removeClass 'inProgress'
+        .addClass 'complete'
+
+
   ###
             EDITOR
   ###
+  
+  #  Init vars
+  $scope.files = {}
+  $scope.filesInProgress = {}
+  $scope.fileSelected = []
+  $scope.imageTitle = ''
+  $scope.imageDesc = ''
+  $scope.tags
+  $scope.allTags = {}
+  Tags = $resource '/api/tags'
+  Auto = $resource '/api/auto'
+
   #  Image Selection
   $scope.imageClick = (id, $scope) ->
     $scope.$apply () ->
@@ -134,7 +155,6 @@ angular.module 'hmm2App'
             $scope.imageDesc = $scope.files[$scope.fileSelected[0]].description;
           if !s
             $scope.imageDesc = ''
-      
 
   #  Write Name and Description to selected images
   $scope.$watch 'imageTitle', (newValue, oldValue) ->
@@ -159,17 +179,16 @@ angular.module 'hmm2App'
     else
       $scope.addTagtoSelected tag
       $scope.allTags[tag._id] = tag
-
   $scope.tagRemoved = (tag) ->
     $scope.removeTagFromSelected tag
-
   #  Autocomplete
   $scope.findTags = (query) ->
     return Auto.query(query).$promise
-
+  #  Add Tags
   $scope.addTagtoSelected = (tag) ->
     angular.forEach $scope.fileSelected, (id, key) ->
       $scope.files[id].tags.push tag._id
+  #  Load Tags into editor
   $scope.getTagsFromSelected = () ->
     uniq = {}
     #  get all tags from all selected Images
@@ -186,6 +205,7 @@ angular.module 'hmm2App'
         console.log 'Error: Somehow a tag was lost...'
         tags.splice key, 1
     return tags
+  #  Remove tags
   $scope.removeTagFromSelected = (tag) ->
     #  make sure our records don't save these tags to the db
     angular.forEach $scope.fileSelected, (id, key) ->
@@ -193,21 +213,8 @@ angular.module 'hmm2App'
       if i > -1
         $scope.files[id].tags.splice i, 1
 
-  #  Update S3 upload Progress
-  $scope.$watchCollection 'filesInProgress', (newValues, oldValues) ->
-    angular.forEach newValues, (progress, key) ->
-      # insert progress bar if nonexistant
-      if !oldValues[key]
-        $ '#'+key
-        .addClass 'inProgress'
-        .prepend '<div class="s3progress"><p class="percentage"></p></div>'
-      
-      # update percentage
-      $ '#'+key+' .s3progress .percentage'
-      .text progress+'%'
-      
-      # complete
-      if progress == 100
-        $ '#'+key 
-        .removeClass 'inProgress'
-        .addClass 'complete'
+  #  Remove Selected Images
+  $scope.removeSelected = () ->
+    angular.forEach $scope.fileSelected, (id, key) ->
+      socket.socket.emit 'image:remove', id
+    

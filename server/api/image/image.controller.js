@@ -11,6 +11,8 @@
 
 var _ = require('lodash');
 var Image = require('./image.model');
+var aws = require('aws-sdk');
+aws.config.endpoint = process.env.AWS_ENDPOINT;
 
 // Get list of images
 exports.index = function(req, res) {
@@ -58,7 +60,18 @@ exports.destroy = function(req, res) {
     if(!image) { return res.send(404); }
     image.remove(function(err) {
       if(err) { return handleError(res, err); }
-      return res.send(204);
+      //  remove from s3 bucket
+      var params = {
+        Bucket: process.env.AWS_ORIGINAL_BUCKET,
+        Key: image.id,
+
+      }
+      var s3 = new aws.S3();
+      s3.deleteObject(params, function(err, data){
+        if(err) { return handleError(res, err); }
+        return res.send(204, data);
+      });
+      //return res.send(204);
     });
   });
 };

@@ -3,11 +3,6 @@ div(ng-include='"components/navbar/navbar.html"')
 .container
 
   .editor.form-horizontal(ng-show="fileSelected.length > 0")
-    .selected
-      label Selected Images
-      .item(ng-repeat="id in fileSelected")
-        span.id {{id}}
-    
     .name
       +inputWrap("Image Title")
         input.form-control(type="text", placeholder="image title", ng-model="imageTitle", title="Image Title")
@@ -18,6 +13,9 @@ div(ng-include='"components/navbar/navbar.html"')
       +inputWrap("Tags")
         tags-input(ng-model="tags", title="Tags", replace-spaces-with-dashes="false", on-tag-added="tagAdded($tag)", on-tag-removed="tagRemoved($tag)")
           auto-complete(source="findTags($query)")
+    .actionz
+      +inputWrap("Actions")
+        button(ng-click="removeSelected()" class="btn btn-default btn-block" type="button" name="delete") Remove Selected
   
 
   
@@ -27,6 +25,6 @@ div(ng-include='"components/navbar/navbar.html"')
     form.dropzone(ng-data name="image-details")
 
 .container.debug.clearfix
-  div {{tags | json}}
-
+  div {{files | json}}
+.container.debug.clearfix
   div {{allTags | json}} 

@@ -9,6 +9,7 @@ var aws             = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
 var EventEmitter    = require('events').EventEmitter;
 var util            = require("util");
+var managed         = require('./up.managed');
 
 var Upload = function(file, IMG, params) {
   EventEmitter.call(this);
@@ -63,6 +64,8 @@ Upload.prototype.send = function(callback) {
       callback(err, data);
     }
   });
+  //  add to managedUpload object for easy access
+  managed[self.id] = S3;
 }
 
 

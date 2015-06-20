@@ -87,6 +87,8 @@ angular.module('hmm2App')
           cb(event, item, obj);
         });
 
+
+
         /*
         Syncs removed items on 'model:remove'
          */
