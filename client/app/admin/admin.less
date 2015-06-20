@@ -68,3 +68,23 @@
   div.drop.over.notempty { background-color: @bgcolor-ne; }
 }
 
+@primary: #40B64F;
+
+.inProgress .s3progress,
+.complete .s3progress {
+  z-index: 500;
+}
+.s3progress {
+  width: 120px;
+  height: 120px;
+  margin: 0px;
+  position: absolute;
+  z-index: 0;
+  .percentage {
+    font-size: 22px;
+    color: #fff;
+    font-weight: 900;
+    text-align: center;
+    margin: -20px auto 0px;
+  }
+}

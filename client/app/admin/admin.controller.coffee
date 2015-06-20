@@ -12,7 +12,27 @@ angular.module 'hmm2App'
   $scope.allTags = {}
   Tags = $resource('/api/tags');
   Auto = $resource('/api/auto');
-
+  
+  ###
+        DROPZONE
+  ###
+  #   Config
+  $scope.dropzoneConfig = {
+    url: '/up'
+    previewsContainer: 'form.dropzone[name="image-details"]'
+    parallelUploads: 3
+    maxFileSize: 40
+    acceptedFiles:'image/*'
+    #autoProcessQueue: false
+    init: () ->
+      this.on 'dragover', $scope.dragover
+      this.on 'dragleave', $scope.dragleave
+      this.on 'drop', $scope.dragleave
+      this.on 'addedfile', $scope.filechange
+      this.on 'removedfile', $scope.filechange
+      this.on 'success', $scope.success
+      $scope.dz = this
+  }
   #  Dropzone Event Functions
   $scope.dragover = (event) ->
     $ 'div.drop' 
@@ -28,25 +48,24 @@ angular.module 'hmm2App'
     else
       #$('div.dz-message').show()
       $('div.drop').addClass 'notempty'
-  
   #  Image successfully added to dropzone and processed by upload api
   $scope.success = (file, res) ->
     #  Add image to model and watch
     image = res
     imageId = if image.id then image.id else image._id
-    $scope.files[image._id] = image
+    $scope.files[imageId] = image
     socket.syncUpdatesObj 'image', $scope.files
     socket.syncUploadProgress imageId, $scope.filesInProgress
-
+    
     #  Image orientation class
     if image.orientation
       $ file.previewElement 
       .find '.dz-image'
       .addClass 'image-orientation-' + image.orientation
     #  Select listener
-    if image._id
+    if imageId
       $ file.previewElement
-      .attr 'id', image._id
+      .attr 'id', imageId
       .on 'click', (event) ->
         #  toggle class
         id = $ event.currentTarget
@@ -56,7 +75,9 @@ angular.module 'hmm2App'
         $scope.imageClick id, $scope
         #  keep editor current
         $scope.updateEditor()
-
+  ###
+            EDITOR
+  ###
   #  Image Selection
   $scope.imageClick = (id, $scope) ->
     $scope.$apply () ->
@@ -86,6 +107,7 @@ angular.module 'hmm2App'
         if value != $scope.files[id][attr]
           resolve false
       resolve true
+  
   #  Keep Editor view updated
   $scope.updateEditor = () ->
     $scope.$apply () ->
@@ -171,22 +193,21 @@ angular.module 'hmm2App'
       if i > -1
         $scope.files[id].tags.splice i, 1
 
-  #   Dropzone Config
-  $scope.dropzoneConfig = {
-    url: '/up'
-    previewsContainer: 'form.dropzone[name="image-details"]'
-    parallelUploads: 3
-    maxFileSize: 40
-    acceptedFiles:'image/*'
-    #autoProcessQueue: false
-    init: () ->
-      this.on 'dragover', $scope.dragover
-      this.on 'dragleave', $scope.dragleave
-      this.on 'drop', $scope.dragleave
-      this.on 'addedfile', $scope.filechange
-      this.on 'removedfile', $scope.filechange
-      this.on 'success', $scope.success
-      $scope.dz = this
-  }
-
-
+  #  Update S3 upload Progress
+  $scope.$watchCollection 'filesInProgress', (newValues, oldValues) ->
+    angular.forEach newValues, (progress, key) ->
+      # insert progress bar if nonexistant
+      if !oldValues[key]
+        $ '#'+key
+        .addClass 'inProgress'
+        .prepend '<div class="s3progress"><p class="percentage"></p></div>'
+      
+      # update percentage
+      $ '#'+key+' .s3progress .percentage'
+      .text progress+'%'
+      
+      # complete
+      if progress == 100
+        $ '#'+key 
+        .removeClass 'inProgress'
+        .addClass 'complete'
