@@ -22,6 +22,9 @@ exports.register = function(socket) {
   socket.on('image:remove', function(id){
     destroy(id);
   });
+  socket.on('image:edit', function(image){
+    edit(image);
+  });
 }
 
 function onSave(socket, doc, cb) {
@@ -53,10 +56,19 @@ function destroy (id) {
         var s3 = new aws.S3();
         s3.deleteObject(params, function(err, data){
           if(err) { console.log('image:remove error', err); } else {
-            console.log('image:removed', data);
+            console.log('image:removed', id);
           }
         });
       });
     }
+  });
+};
+// Deletes a image from the DB and S3 bucket.
+function edit (im) {
+  var id = im.id;
+  delete im.id;
+  // find record
+  image.findByIdAndUpdate(id, im, function (err, i) {
+    if(err) { console.log (err); }
   });
 };

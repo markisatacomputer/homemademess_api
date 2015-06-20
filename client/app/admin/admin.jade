@@ -5,17 +5,17 @@ div(ng-include='"components/navbar/navbar.html"')
   .editor.form-horizontal(ng-show="fileSelected.length > 0")
     .name
       +inputWrap("Image Title")
-        input.form-control(type="text", placeholder="image title", ng-model="imageTitle", title="Image Title")
+        input.form-control(type="text", placeholder="image title", ng-model="imageTitle", title="Image Title" ng-model-options="ngo")
     .description
       +inputWrap("Description")
-        textarea.form-control(placeholder="description", ng-model="imageDesc", title="Description", rows="3")
+        textarea.form-control(placeholder="description", ng-model="imageDesc", title="Description", rows="3" ng-model-options="ngo")
     .tagz
       +inputWrap("Tags")
         tags-input(ng-model="tags", title="Tags", replace-spaces-with-dashes="false", on-tag-added="tagAdded($tag)", on-tag-removed="tagRemoved($tag)")
           auto-complete(source="findTags($query)")
     .actionz
       +inputWrap("Actions")
-        button(ng-click="removeSelected()" class="btn btn-default btn-block" type="button" name="delete") Remove Selected
+        button(ng-click="removeSelected()" class="btn btn-danger btn-block" type="button" name="delete") Remove Selected
   
 
   

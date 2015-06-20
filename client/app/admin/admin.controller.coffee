@@ -98,6 +98,7 @@ angular.module 'hmm2App'
   $scope.allTags = {}
   Tags = $resource '/api/tags'
   Auto = $resource '/api/auto'
+  $scope.ngo = { updateOn: 'default blur', debounce: { 'default': 500, 'blur': 0 } }
 
   #  Image Selection
   $scope.imageClick = (id, $scope) ->
@@ -161,10 +162,20 @@ angular.module 'hmm2App'
     if newValue != oldValue and newValue != ''
       angular.forEach $scope.fileSelected, (id, key) ->
         $scope.files[id].name = newValue
+        socket.socket.emit 'image:edit', {id: id, name: newValue}
   $scope.$watch 'imageDesc', (newValue, oldValue) ->
     if newValue != oldValue and newValue != ''
       angular.forEach $scope.fileSelected, (id, key) ->
         $scope.files[id].description = newValue
+        socket.socket.emit 'image:edit', {id: id, description: newValue}
+
+  #  Make sure we remove files from DOM as they are removed from scope
+  $scope.$watchCollection 'files', (newFiles, oldFiles) ->
+    angular.forEach oldFiles, (file, id) ->
+      #  has anything been removed?  If so, let's remove it from the DOM
+      if !newFiles[id]
+        $ '#'+id
+        .remove()
   
   #  Tag-Input Events
   $scope.tagAdded = (tag) ->
@@ -188,6 +199,7 @@ angular.module 'hmm2App'
   $scope.addTagtoSelected = (tag) ->
     angular.forEach $scope.fileSelected, (id, key) ->
       $scope.files[id].tags.push tag._id
+      socket.socket.emit 'image:edit', {id: id, tags: $scope.files[id].tags}
   #  Load Tags into editor
   $scope.getTagsFromSelected = () ->
     uniq = {}
@@ -212,16 +224,10 @@ angular.module 'hmm2App'
       i = $scope.files[id].tags.indexOf tag._id
       if i > -1
         $scope.files[id].tags.splice i, 1
+        socket.socket.emit 'image:edit', {id: id, tags: $scope.files[id].tags}
 
   #  Remove Selected Images
   $scope.removeSelected = () ->
     angular.forEach $scope.fileSelected, (id, key) ->
       socket.socket.emit 'image:remove', id
 
-  #  Make sure we remove files from DOM as they are removed from scope
-  $scope.$watchCollection 'files', (newFiles, oldFiles) ->
-    angular.forEach oldFiles, (file, id) ->
-      #  has anything been removed?  If so, let's remove it from the DOM
-      if !newFiles[id]
-        $ '#'+id
-        .remove()
