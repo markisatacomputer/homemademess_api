@@ -1,20 +1,31 @@
 homemademess
 ====================
 
-Using
+An image management tool for me.
+
+TODO (before view)
 ---------------------
 
-+  https://github.com/totaljs/framework
++  Remove from upload
++  Finish upload on S3completion
+  +  Save to db - 'temp' key => 0
+  +  remove tmp files
 
-Thinking about using
+
+TODO (in parallel with view)
 ---------------------
 
++  Move editor into its own scope for reuse
++  create derivatives in upload class
++  model for derivative transformations
++  think about toning down(/gutting) dropzone styles
+
+
+
+
+Notes for the future
+---------------------
+
++  image manipulation?  watermarking?
 +  https://github.com/Automattic/node-canvas
-+  https://github.com/EyalAr/lwip
 
-[Dream Objects](http://wiki.dreamhost.com/DreamObjects_Overview)
----------------------
-+  https://github.com/firejune/swift
-+  https://github.com/feedhenry/openstack-storage
-+  https://github.com/gabrielhurley/js-openclient
-+  https://github.com/bancek/light-swift
