@@ -217,4 +217,11 @@ angular.module 'hmm2App'
   $scope.removeSelected = () ->
     angular.forEach $scope.fileSelected, (id, key) ->
       socket.socket.emit 'image:remove', id
-    
+
+  #  Make sure we remove files from DOM as they are removed from scope
+  $scope.$watchCollection 'files', (newFiles, oldFiles) ->
+    angular.forEach oldFiles, (file, id) ->
+      #  has anything been removed?  If so, let's remove it from the DOM
+      if !newFiles[id]
+        $ '#'+id
+        .remove()
