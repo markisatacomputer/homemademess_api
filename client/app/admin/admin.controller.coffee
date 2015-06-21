@@ -10,7 +10,7 @@ angular.module 'hmm2App'
   $scope.dropzoneConfig = {
     url: '/up'
     previewsContainer: 'form.dropzone[name="image-details"]'
-    parallelUploads: 3
+    parallelUploads: 1
     maxFileSize: 40
     acceptedFiles:'image/*'
     #autoProcessQueue: false
@@ -43,8 +43,17 @@ angular.module 'hmm2App'
     imageId = if image.id then image.id else image._id
     $scope.files[imageId] = image
     socket.syncUpdatesObj 'image', $scope.files
-    socket.syncUploadProgress imageId, $scope.filesInProgress
+    socket.syncUploadProgress imageId, $scope.filesInProgress, (event, item, obj) ->
+      #  on complete, check to see if all files are done so we can show the save button
+      if event == 'complete'
+        $scope.filesDone[item] = 100
+        if angular.equals $scope.filesDone, $scope.filesInProgress
+          $ '#save-all'
+          .addClass 'ready'
     
+    #  Make sure when new files are added we hide the save button until they're done uploading
+    $ '#save-all'
+    .removeClass 'ready'
     #  Image orientation class
     if image.orientation
       $ file.previewElement 
@@ -91,6 +100,8 @@ angular.module 'hmm2App'
   #  Init vars
   $scope.files = {}
   $scope.filesInProgress = {}
+  $scope.filesDone = {}
+  $scope.allDone = false;
   $scope.fileSelected = []
   $scope.imageTitle = ''
   $scope.imageDesc = ''
@@ -176,6 +187,9 @@ angular.module 'hmm2App'
       if !newFiles[id]
         $ '#'+id
         .remove()
+
+  #  When uploads are done show the save button
+
   
   #  Tag-Input Events
   $scope.tagAdded = (tag) ->

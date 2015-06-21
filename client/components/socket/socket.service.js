@@ -87,8 +87,6 @@ angular.module('hmm2App')
           cb(event, item, obj);
         });
 
-
-
         /*
         Syncs removed items on 'model:remove'
          */
@@ -128,7 +126,7 @@ angular.module('hmm2App')
           var event;
           event = 'complete';
           obj[id] = 100;//delete obj[id];
-          cb(event, item, obj);
+          cb(event, id, obj);
         });
       },
 

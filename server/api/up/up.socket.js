@@ -11,7 +11,7 @@ exports.register = function(socket) {
   UpListener.on('S3Progress', function(id, progress){
     socket.emit(id+':progress', progress);
   });
-  UpListener.on('S3UploadEnd', function(id, end) {
-    socket.emit(id+':end', end);
+  UpListener.on('S3UploadEnd', function(id, complete) {
+    socket.emit(id+':complete', complete);
   });
 }
