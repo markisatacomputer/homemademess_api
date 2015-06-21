@@ -25,6 +25,9 @@ exports.register = function(socket) {
   socket.on('image:edit', function(image){
     edit(image);
   });
+  socket.on('image:save', function(id){
+    save(id);
+  });
 }
 
 function onSave(socket, doc, cb) {
@@ -37,7 +40,7 @@ function onRemove(socket, doc, cb) {
   socket.emit('image:remove', doc);
 }
 
-// Deletes a image from the DB and S3 bucket.
+// Deletes an image from the DB and S3 bucket.
 function destroy (id) {
   // find record
   image.findById(id, function (err, image) {
@@ -63,12 +66,21 @@ function destroy (id) {
     }
   });
 };
-// Deletes a image from the DB and S3 bucket.
+// Updates an image in the DB.
 function edit (im) {
   var id = im.id;
   delete im.id;
   // find record
   image.findByIdAndUpdate(id, im, function (err, i) {
     if(err) { console.log (err); }
+  });
+};
+// Saves an image in the DB by removing temporary.
+function save (id) {
+  console.log('save - id', id);
+  // find record
+  image.findByIdAndUpdate(id, {$unset: {temporary: ""}}, function (err, i) {
+    if(err) { console.log (err); }
+    console.log(i);
   });
 };

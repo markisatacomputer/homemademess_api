@@ -245,3 +245,8 @@ angular.module 'hmm2App'
     angular.forEach $scope.fileSelected, (id, key) ->
       socket.socket.emit 'image:remove', id
 
+  #  Save the finished uploads and move to view
+  $scope.saveAll = () ->
+    angular.forEach $scope.files, (file, id) ->
+      socket.socket.emit 'image:save', id
+    $state.go 'main'
