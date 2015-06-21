@@ -6,10 +6,13 @@ An image management tool for me.
 TODO (before view)
 ---------------------
 
-+  Remove from upload
++  Delete derivatives from S3 on db delete Image
 +  Finish upload on S3completion
-  +  Save to db - 'temp' key => 0
   +  remove tmp files
++  cleanup unsaved (aka image.temporary < Date.now ) from S3 
+  +  cron?
+  +  ~ jenkins?
++  enable edit created date
 
 
 TODO (in parallel with view)
