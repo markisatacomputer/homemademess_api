@@ -22,6 +22,7 @@
     "mongoose": "~3.8.8",
     "morgan": "~1.0.0",
     "multer": "^0.1.8",
+    "node-schedule": "^0.2.9",
     "passport": "~0.2.0",
     "passport-google-oauth": "latest",
     "passport-local": "~0.1.6",
