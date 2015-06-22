@@ -9,7 +9,6 @@ var Image = require('../image/image.model');
 var Exif = require('../exif/exif.model');
 var ExifImage = require('exif').ExifImage;
 var Q = require('q');
-var gm = require('gm');
 
 // Get EXIF metadata
 function getExif(image) {
@@ -93,97 +92,6 @@ function getValidDate(exif) {
   }
 }
 
-// Log object upload result
-function logObjectUpload(err, data) {
-  if (err) { 
-    console.log('Error: ', err); 
-  } else {
-    console.log('Upload successful: ', data);
-  }
-}
-
-// Log db save error
-function logSave(err) {
-  if (err) {
-    console.log('Error writing derivative to db: ', err);
-  }
-}
-
-// Upload Derivatives to Bucket
-function upDerivatives(file, IMG) {
-  var deferred = Q.defer();
-  //  all size w, h
-  var sizes = {
-    sm:[300,600],
-    md:[600,1200],
-    lg:[800,1600]
-  };
-  // pipe each thumb size to object
-  _.forEach(sizes, function(thumbSize, sizeKey) {
-    exports.imageOrient(file).then( function(size, err) {
-      // save orientation fixed dimensions to file
-      IMG.width = size.width;
-      IMG.height = size.height;
-      // use orientation fixed file to determine size
-      var img = gm(file+'-oriented');
-      // image is vertical we use height
-      if (size.width < size.height) {
-        // resize
-        img.resize(null,thumbSize[1]);
-        // store measurements for db
-        var d = {height: thumbSize[1]};
-        d.width = Math.round((thumbSize[1]/size.height)*size.width);
-      // image is horizontal or square we use width
-      } else {
-        // resize
-        img.resize(null, thumbSize[0]);
-        // store measurements for db
-        var d = {height: thumbSize[0]};
-        d.width = Math.round((thumbSize[0]/size.height)*size.width);
-      }
-
-      img.compress('JPEG').quality(60).stream(function (err, stdout, stderr) {
-        //  set thumb bucket
-        var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: IMG.id+'/'+sizeKey+'.jpg', ACL: "public-read" }});
-        //  stream to object
-        hmmtestthumb.upload({Body: stdout}, function(err, data) {
-          //  write to db
-          d.uri = data.Location;
-          IMG.derivative.push(d);
-          IMG.save(logSave);
-          // log
-          logObjectUpload(err, data);
-          // cleanup - needs to happen in the promise.then down below
-        });
-      });
-    });
-  });
-
-  return deferred.promise;
-}
-
-exports.imageOrient = function(file) {
-  var size = 0;
-  var deferred = Q.defer();
-  var path = file+'-oriented';
-  // write oriented image
-  gm(file).autoOrient().write(path, function(err, stdout, stderr, command){
-    // log errors
-    if (err) { deferred.reject(err); }
-    if (stderr) { deferred.reject(stderr); }
-    // return size of autoOriented image
-    gm(path).size(function(err, value) {
-      if (value) {
-        deferred.resolve(value);
-      } else {
-        deferred.reject(err);
-      }
-    });
-  })
-  
-  return deferred.promise;
-}
-
 /*      Process upload
  *
  *    1. CHECK Get exif
@@ -225,8 +133,6 @@ exports.index = function(req, res) {
           UpListener.emit('S3UploadEnd', id, end);
         });
         up.send();
-        //  send derivatives
-        upDerivatives(file.path, i);
         // pass back our image
         return res.json(200, i);
       });
