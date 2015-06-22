@@ -1,8 +1,6 @@
 'use strict';
 
 var _ = require('lodash');
-var aws = require('aws-sdk');
-aws.config.endpoint = process.env.AWS_ENDPOINT;
 var Upload = require('./up.model');
 var UpListener = require('./up.listener');
 var Image = require('../image/image.model');
