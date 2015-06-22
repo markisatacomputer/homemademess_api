@@ -7,7 +7,6 @@
 var image = require('./image.model');
 var aws = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
-var managed = require('../up/up.managed');
 
 exports.register = function(socket) {
   image.schema.post('save', function (doc) {
@@ -49,19 +48,6 @@ function destroy (id) {
       // delete record
       image.remove(function(err) {
         if(err) { console.log (err); }
-        // abort managed upload
-        if (managed[id]) { managed[id].abort(); }
-        //  remove from s3 bucket
-        var params = {
-          Bucket: process.env.AWS_ORIGINAL_BUCKET,
-          Key: image.id,
-        }
-        var s3 = new aws.S3();
-        s3.deleteObject(params, function(err, data){
-          if(err) { console.log('image:remove error', err); } else {
-            console.log('image:removed', id);
-          }
-        });
       });
     }
   });

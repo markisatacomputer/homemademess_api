@@ -4,6 +4,7 @@ var _ = require('lodash');
 var aws = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
 var url = require('url');
+var managed = require('../up/up.managed');
 var mongoose = require('mongoose'),
   Schema = mongoose.Schema;
 
@@ -45,12 +46,25 @@ var ImageSchema = new Schema({
 });
 
 ImageSchema.post('remove', function (doc) {
-  // remove all derivatives
   var ds = doc.derivative;
   var s3 = new aws.S3();
+  var id = doc.id;
+
+   // abort managed upload
+  if (managed[id]) { managed[id].abort(); }
+  //  remove ORIGINAL from s3 bucket
+  var params = {
+    Bucket: process.env.AWS_ORIGINAL_BUCKET,
+    Key: id,
+  }
+  s3.deleteObject(params, function(err, data){
+    if(err) { console.log('image:remove error', err); } else {
+      console.log('image:removed', id);
+    }
+  });
+  //  remove from DERIVATIVES from s3 bucket
   _.forEach(ds, function(d){
     var path = url.parse(d.uri).pathname.slice(1);
-    //  remove from s3 bucket
     var params = {
       Bucket: process.env.AWS_THUMB_BUCKET,
       Key: path,
