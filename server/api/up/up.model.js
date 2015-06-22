@@ -69,6 +69,10 @@ Upload.prototype.send = function(callback) {
     if (callback) {
       callback(err, data);
     }
+    //  no more need for the managed copy
+    if (managed[self.id]) {
+      delete managed[self.id];
+    }
     // upload the derivatives then delete the tmp files
     self.upDerivatives(self.file, self.IMG).then( function() {
       fs.unlink(self.file, function (err) {

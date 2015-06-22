@@ -51,7 +51,11 @@ ImageSchema.post('remove', function (doc) {
   var id = doc.id;
 
    // abort managed upload
-  if (managed[id]) { managed[id].abort(); }
+  if (managed[id]) { 
+    managed[id].abort();
+    //  remove from managed copies
+    delete managed[id];
+  }
   //  remove ORIGINAL from s3 bucket
   var params = {
     Bucket: process.env.AWS_ORIGINAL_BUCKET,
