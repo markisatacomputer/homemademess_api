@@ -2,7 +2,7 @@
 
 var _ = require('lodash');
 var Upload = require('./up.model');
-var UpListener = require('./up.listener');
+var Queue = require('./up.queue');
 var Image = require('../image/image.model');
 var Exif = require('../exif/exif.model');
 var ExifImage = require('exif').ExifImage;
@@ -122,16 +122,9 @@ exports.index = function(req, res) {
           console.log(err);
           return res.json(200, err);
         }
-        //  get uploads started
-        var up = new Upload(file.path, i);
-        //  attach listener
-        up.on('S3Progress', function (id, progress) {
-          UpListener.emit('S3Progress', id, progress);
-        }).on('S3UploadEnd', function (id, end) {
-          UpListener.emit('S3UploadEnd', id, end);
-        });
-        up.send();
-        // pass back our image
+        //  add file to upload queue
+        Queue.add(file.path, i.id);
+        // pass back our image db record
         return res.json(200, i);
       });
     });

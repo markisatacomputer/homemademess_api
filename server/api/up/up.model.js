@@ -9,17 +9,16 @@ var aws             = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
 var EventEmitter    = require('events').EventEmitter;
 var util            = require("util");
-var managed         = require('./up.managed');
 var gm              = require('gm');
 var Q               = require('q');
 var _               = require('lodash');
 
 var Upload = function(file, IMG, params) {
   EventEmitter.call(this);
-  this.file = file;
-  this.IMG = IMG;
-  this.id = IMG.id;
-  this.params = {};
+  this.file = typeof file!== 'undefined' ? file : 0;
+  this.IMG = typeof IMG !== 'undefined' ?  IMG : {id: 0};
+  this.id = this.IMG.id;
+  this.params = typeof params !== 'undefined' ? params : {};
   this.upDerivatives = upDerivatives;
   this.imageOrient = imageOrient;
 }
@@ -60,36 +59,46 @@ Upload.prototype.S3 = function() {
 //  Send Original File
 Upload.prototype.send = function(callback) {
   var self = this;
-  var S3 = this.S3();
-  //  send
-  S3.send(function(err, data) {
-    //  pass on event to server for socket
-    self.emit('S3UploadEnd', self.id, data);
-    logObjectUpload(err, data);
-    if (callback) {
-      callback(err, data);
-    }
-    //  no more need for the managed copy
-    if (managed[self.id]) {
-      delete managed[self.id];
-    }
-    // upload the derivatives then delete the tmp files
-    self.upDerivatives(self.file, self.IMG).then( function() {
-      fs.unlink(self.file, function (err) {
-        if (err) { console.log(err); }
-        console.log('successfully deleted '+self.file);
-      });
-      fs.unlink(self.file+'-oriented', function (err) {
-        if (err) { console.log(err); }
-        console.log('successfully deleted '+self.file+'-oriented');
+
+  //  make sure we've got something to send
+  if (self.file && self.IMG.id) {
+    var S3 = this.S3();
+    //  send
+    S3.send(function(err, data) {
+      //  pass on event to server for socket
+      self.emit('S3UploadEnd', self.id, data);
+      logObjectUpload(err, data);
+      if (callback) {
+        callback(err, data);
+      }
+      // upload the derivatives then delete the tmp files
+      upDerivatives(self.file, self.IMG).then( function(data) {
+        console.log('upDerivatives', data);
+        //  delete original
+        fs.unlink(self.file, function (err) {
+          if (err) { console.log(err); }
+          console.log('successfully deleted '+self.file);
+          //  delete oriented
+          fs.unlink(self.file+'-oriented', function (err) {
+            if (err) { console.log(err); }
+            console.log('successfully deleted '+self.file+'-oriented');
+            //  this is the final final event - all uploads done - all tmp files clean
+            self.emit('StackEnd', self.file);
+          });
+        });
       });
     });
-  });
-  //  add to managedUpload object for easy access
-  managed[self.id] = S3;
+  } else {
+    console.error('Upload.send called without setting file or IMG.');
+  }
+}
+Upload.prototype.abort = function () {
+  this.S3.abort();
 }
 // Send Derivatives to Bucket - private
 var upDerivatives = function (file, IMG) {
+  var deferred = Q.defer();
+  // all thumb promises
   var all = [];
   //  all size w, h
   var sizes = {
@@ -97,65 +106,87 @@ var upDerivatives = function (file, IMG) {
     md:[600,1200],
     lg:[800,1600]
   };
-  // pipe each thumb size to object
-  _.forEach(sizes, function(thumbSize, sizeKey) {
-    //  promise each derivative
-    var deferred = Q.defer();
-    all.push(deferred.promise);
-    //  orient image
-    imageOrient(file).then( function(size, err) {
-      // save orientation fixed dimensions to file
-      IMG.width = size.width;
-      IMG.height = size.height;
-      // use orientation fixed file to determine size
-      var img = gm(file+'-oriented');
-      // image is vertical we use height
-      if (size.width < size.height) {
-        // resize
-        img.resize(null,thumbSize[1]);
-        // store measurements for db
-        var d = {height: thumbSize[1]};
-        d.width = Math.round((thumbSize[1]/size.height)*size.width);
-      // image is horizontal or square we use width
-      } else {
-        // resize
-        img.resize(null, thumbSize[0]);
-        // store measurements for db
-        var d = {height: thumbSize[0]};
-        d.width = Math.round((thumbSize[0]/size.height)*size.width);
-      }
 
-      img.compress('JPEG').quality(60).stream(function (err, stdout, stderr) {
-        //  set thumb bucket
-        var hmmtestthumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: IMG.id+'/'+sizeKey+'.jpg', ACL: "public-read" }});
-        //  stream to object
-        hmmtestthumb.upload({Body: stdout}, function(err, data) {
-          //  write to db
-          d.uri = data.Location;
-          IMG.derivative.push(d);
-          IMG.save(function (err) {
-            if (err) {
-              console.log('Error writing derivative to db: ', err);
-            }
-          });
-          // resolve promise
-          deferred.resolve(data);
-          // log
-          logObjectUpload(err, data);
-        });
+  //  orient image before thumb creation
+  imageOrient(file).then( function(size) {
+    console.log('orientating');
+    // save orientation fixed dimensions to db
+    IMG.width = size.width;
+    IMG.height = size.height;
+    // pipe each thumb size to object
+    _.forEach(sizes, function(thumbSize, sizeKey) {
+      //  promise each derivative
+      all.push(createThumb(file+'-oriented', size, thumbSize, sizeKey));
+    });
+    //  promise the resolution of all thumb creation
+    Q.all(all).then(function(success){
+      deferred.resolve(success);
+    }, function(err){
+      deferred.reject(err);
+    });
+  }, function (err){
+    console.log('orient error', err);
+    deferred.reject(err);
+  });
+  
+  return deferred.promise;
+}
+
+var createThumb = function (file, size, thumbSize, sizeKey) {
+  console.log(size);
+  var deferred = Q.defer();
+  // use orientation fixed file to determine size
+  var img = gm(file);
+  // image is vertical we use height
+  if (size.width < size.height) {
+    // resize
+    img.resize(null,thumbSize[1]);
+    // store measurements for db
+    var d = {height: thumbSize[1]};
+    d.width = Math.round((thumbSize[1]/size.height)*size.width);
+  // image is horizontal or square we use width
+  } else {
+    // resize
+    img.resize(null, thumbSize[0]);
+    // store measurements for db
+    var d = {height: thumbSize[0]};
+    d.width = Math.round((thumbSize[0]/size.height)*size.width);
+  }
+
+  img.compress('JPEG').quality(60).stream(function (err, stdout, stderr) {
+    console.log("stream\r");
+    //  set thumb bucket
+    var thumb = new aws.S3({params: {Bucket: process.env.AWS_THUMB_BUCKET, Key: IMG.id+'/'+sizeKey+'.jpg', ACL: "public-read" }});
+    thumb.on('httpUploadProgress', function(progress){
+      console.log(IMG.id, sizeKey, progress);
+    });
+    //  stream to object
+    thumb.upload({Body: stdout}, function(err, data) {
+      console.log(IMG);
+      //  write to db
+      d.uri = data.Location;
+      IMG.derivative.push(d);
+      IMG.save(function (err) {
+        if (err) {
+          console.log('Error writing derivative to db: ', err);
+        }
       });
+      // resolve promise
+      deferred.resolve(data);
+      // log
+      logObjectUpload(err, data);
     });
   });
 
-  return Q.all(all);
+  return deferred.promise;
 }
 
 var imageOrient = function (file) {
-  var size = 0;
   var deferred = Q.defer();
   var path = file+'-oriented';
   // write oriented image
   gm(file).autoOrient().write(path, function(err, stdout, stderr, command){
+    console.log('imageOrient');
     // log errors
     if (err) { deferred.reject(err); }
     if (stderr) { deferred.reject(stderr); }
@@ -167,7 +198,7 @@ var imageOrient = function (file) {
         deferred.reject(err);
       }
     });
-  })
+  });
   
   return deferred.promise;
 }
@@ -182,4 +213,4 @@ var logObjectUpload = function (err, data) {
 }
 
 
-module.exports = Upload;
+module.exports = new Upload();

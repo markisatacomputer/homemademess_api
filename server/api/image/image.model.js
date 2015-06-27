@@ -4,7 +4,7 @@ var _ = require('lodash');
 var aws = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
 var url = require('url');
-var managed = require('../up/up.managed');
+var Queue = require('../up/up.queue');
 var mongoose = require('mongoose'),
   Schema = mongoose.Schema;
 
@@ -50,12 +50,9 @@ ImageSchema.post('remove', function (doc) {
   var s3 = new aws.S3();
   var id = doc.id;
 
-   // abort managed upload
-  if (managed[id]) { 
-    managed[id].abort();
-    //  remove from managed copies
-    delete managed[id];
-  }
+   // abort managed upload if necessary - logic in queue object
+  Queue.abort(id);
+
   //  remove ORIGINAL from s3 bucket
   var params = {
     Bucket: process.env.AWS_ORIGINAL_BUCKET,
