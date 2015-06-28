@@ -1,7 +1,6 @@
 'use strict';
 
 var _ = require('lodash');
-var Upload = require('./up.model');
 var Queue = require('./up.queue');
 var Image = require('../image/image.model');
 var Exif = require('../exif/exif.model');

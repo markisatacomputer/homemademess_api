@@ -11,13 +11,20 @@ require('v8-profiler');
 
 var express = require('express');
 var mongoose = require('mongoose');
+var session = require('express-session');
+var MongoStore = require('connect-mongo')(session);
 var config = require('./config/environment');
 
 // Connect to database
-mongoose.connect(config.mongo.uri, config.mongo.options);
+var connection = mongoose.connect(config.mongo.uri, config.mongo.options);
 
 // Populate DB with sample data
 if(config.seedDB) { require('./config/seed'); }
+
+// Set up sessions to reuse mongoose connection
+app.use(session({
+    store: new MongoStore({ mongooseConnection: mongoose.connection })
+}));
 
 // Setup server
 var app = express();
