@@ -13,6 +13,8 @@
 
 'use strict';
 
+var _               = require('lodash');
+
 var Queue = function() {
   this.stack = [];
   this.files = {};
@@ -86,7 +88,7 @@ Queue.prototype.abort = function (id) {
   if (p !== false) {
     var img = this.current[p];
     var i = img.id ? img.id : img._id ? img._id : false;
-    if (id == i) {
+    if (id === i) {
       this.up.abort();
     }
   }

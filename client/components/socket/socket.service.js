@@ -122,7 +122,7 @@ angular.module('hmm2App')
         /*
         Syncs removed items on 'id:complete'
          */
-        return socket.on(id + ':complete', function(item) {
+        return socket.on(id + ':complete', function() {
           var event;
           event = 'complete';
           obj[id] = 100;//delete obj[id];

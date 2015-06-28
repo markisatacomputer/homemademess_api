@@ -51,7 +51,7 @@ function destroy (id) {
       });
     }
   });
-};
+}
 // Updates an image in the DB.
 function edit (im) {
   var id = im.id;
@@ -60,7 +60,7 @@ function edit (im) {
   image.findByIdAndUpdate(id, im, function (err, i) {
     if(err) { console.log (err); }
   });
-};
+}
 // Saves an image in the DB by removing temporary.
 function save (id) {
   console.log('save - id', id);
@@ -69,4 +69,4 @@ function save (id) {
     if(err) { console.log (err); }
     console.log(i);
   });
-};
+}
