@@ -36,6 +36,7 @@ var Upload = function(file, IMG, params) {
     {name: 'md', size: [600,1200]},
     {name: 'lg', size: [800,1600]},
   ];
+  this.totalsize = 0;
 }
 //  inherit EventEmitter
 util.inherits(Upload, EventEmitter);
@@ -100,6 +101,8 @@ Upload.prototype.upOriginal = function() {
       self.emit('S3UploadEnd', self.IMG.id, data);
       //  log and end our promise
       logAndResolve(err, data, deferred);
+      //  cleanup
+      self.cleanup(self.file);
     });
   } else {
     console.error('Upload.upOriginal called without setting file or IMG.');
@@ -176,7 +179,7 @@ Upload.prototype.createThumb = function (derivative) {
   // use orientation fixed file to determine size
   var img = gm(self.file+ '-oriented');
   var thumbSize = self.derivative.size;
-  var file = self.IMG.id + '-' + self.derivative.name;
+  var file = process.env.UPLOAD_PATH + self.IMG.id + '-' + self.derivative.name;
 
   // image is vertical we use height
   if (self.IMG.width < self.IMG.height) {
