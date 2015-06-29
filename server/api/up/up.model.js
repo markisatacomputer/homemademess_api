@@ -44,15 +44,10 @@ Upload.prototype.constructor = Upload;
 
 Upload.prototype.send = function() {
   var self = this;
-  self.upOriginal().then( function(bla) {
-    console.log('bla');
-    console.log(bla);
-    self.imageOrient().then(function(bla){
-      console.log('bla2');
-      console.log(bla);
-      self.upAllDerivatives().then(function(bla){
-        console.log('bla3');
-        console.log(bla);
+
+  self.upOriginal().then( function() {
+    self.imageOrient().then(function(){
+      self.upAllDerivatives().then(function(){
         self.emit('StackEnd', self.IMG.id);
       });
     });
@@ -96,7 +91,7 @@ Upload.prototype.upOriginal = function() {
   var deferred = Q.defer();
   //  make sure we've got something to send
   if (self.file && self.IMG.id) {
-    var S3 = this.getS3();
+    var S3 = self.getS3();
     //  send
     S3.send(function(err, data) {
       //  pass on event to server for socket
@@ -116,15 +111,15 @@ Upload.prototype.upDerivative = function() {
   var self = this;
   var deferred = Q.defer();
   //  make sure we've got something to send
-  if (self.file && self.IMG.id) {
+  if (self.derivative.file && self.IMG.id) {
     //  set params
     self.params.Bucket = process.env.AWS_THUMB_BUCKET;
-    self.derivative.key = self.IMG.id + '/' + self.derivative.name;
+    self.derivative.key = self.IMG.id + '/' + self.derivative.name + '.jpg';
     self.params.Key = self.derivative.key;
     self.params.Body = fs.createReadStream(self.derivative.file);
-    var S3 = this.getS3();
+    var S3 = self.getS3();
     //  send
-    S3.send(function(err, data) {
+    S3.send( function(err, data) {
       //  store uri in derivative
       self.derivative.uri =  data.Location;
       //  pass on event to server for socket
@@ -141,44 +136,46 @@ Upload.prototype.upDerivative = function() {
 Upload.prototype.upAllDerivatives = function(derivs, def) {
   var self = this;
   var deferred, derivatives;
-  if (def === 'undefined') {
+  if (typeof(def) === 'undefined') {
     deferred = Q.defer();
   } else {
     deferred = def;
   }
 
   //  init derivatives
-  if (derivs === 'undefined') {
-    derivatives = _.clone(self.derivatives, true);
+  if (typeof(derivs) === 'undefined') {
+    derivatives = _.clone(self.derivativeSizes, true);
     self.upAllDerivatives(derivatives, deferred);
   } else {
     derivatives = derivs;
     self.derivative = derivatives.shift();
     // process the size  - thumb, upload, cleanup - then continue or resolve
-    self.createThumb(self.derivative, deferred.reject).then(self.upDerivative,  deferred.reject).then( function(d) {
-      self.cleanUp(self.derivative.name).then(function(cleaned){
-        //  save derivative to db
-        self.IMG.derivative.push({
-          height: self.derivative.height,
-          width: self.derivative.width,
-          uri: self.derivative.uri
-        });
-        self.IMG.save(function(err){
-          if (err) {
-            console.log('DB error', err);
+    self.createThumb(self.derivative, deferred.reject).then( function() {
+      self.upDerivative().then( function(){
+        self.cleanup(self.derivative.file).then( function(cleaned){
+          //  save derivative to db
+          self.IMG.derivative.push({
+            height: self.derivative.height,
+            width: self.derivative.width,
+            uri: self.derivative.uri
+          });
+          self.IMG.save(function(err){
+            if (err) {
+              console.log('DB error', err);
+            }
+          });
+          if (cleaned) {
+            //  more?  then continue
+            if (derivatives.length > 0) {
+              self.upAllDerivatives(derivatives, deferred);
+            } else {
+              self.derivative = {};
+              deferred.resolve(true);
+            }
           }
+        }, function (e){
+          deferred.reject(e);
         });
-        if (cleaned) {
-          //  more?  then continue
-          if (derivatives.length > 0) {
-            self.upAllDerivatives(derivatives, deferred);
-          } else {
-            self.derivative = {};
-            deferred.resolve(true);
-          }
-        }
-      }, function (e){
-        deferred.reject(e);
       });
     });
   }
@@ -189,16 +186,14 @@ Upload.prototype.upAllDerivatives = function(derivs, def) {
 Upload.prototype.imageOrient = function () {
   var self = this;
   var deferred = Q.defer();
-  var path = self.file+'-oriented';console.log(self.file);
+  var path = self.file+'-oriented';
   // write oriented image
   gm(self.file).autoOrient().write(path, function(err) {
-    console.log('imageOrient');
     // log errors
     if (err) { deferred.reject(err); }
     // return size of autoOriented image
     gm(path).size(function(err, value) {
       if (value) {
-        console.log('orientating');
         // save orientation fixed dimensions to db
         self.IMG.width = value.width;
         self.IMG.height = value.height;
@@ -225,7 +220,7 @@ Upload.prototype.createThumb = function () {
   // use orientation fixed file to determine size
   var img = gm(self.file+ '-oriented');
   var thumbSize = self.derivative.size;
-  var file = self.IMG.id + '-' + self.derivative.name
+  var file = self.IMG.id + '-' + self.derivative.name;
 
   // image is vertical we use height
   if (self.IMG.width < self.IMG.height) {
@@ -233,14 +228,14 @@ Upload.prototype.createThumb = function () {
     img.resize(null,thumbSize[1]);
     // store measurements for db
     self.derivative.height = thumbSize[1];
-    self.derivative.width = Math.round((thumbSize[1]/thumbSize.height)*thumbSize.width);
+    self.derivative.width = Math.round((thumbSize[1]/self.IMG.height)*self.IMG.width);
   // image is horizontal or square we use width
   } else {
     // resize
     img.resize(null, thumbSize[0]);
     // store measurements for db
     self.derivative.height = thumbSize[0];
-    self.derivative.width = Math.round((thumbSize[0]/thumbSize.height)*thumbSize.width);
+    self.derivative.width = Math.round((thumbSize[0]/self.IMG.height)*self.IMG.width);
   }
 
   img.compress('JPEG').quality(60).write(file, function (err, stdout, stderr) {
@@ -256,7 +251,7 @@ Upload.prototype.createThumb = function () {
 
 
 //  Remove a tmp file
-Upload.prototype.cleanUp = function(file) {
+Upload.prototype.cleanup = function(file) {
   var deferred = Q.defer();
 
   fs.unlink(file, function (err) {
@@ -274,4 +269,10 @@ Upload.prototype.abort = function () {
   this.S3.abort();
 }
 
-module.exports = new Upload();
+var up = new Upload();
+up.setMaxListeners(0);
+up.on('newListener', function(listener){
+  console.log('newListener', listener);
+});
+
+module.exports = up;

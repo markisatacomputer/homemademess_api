@@ -7,12 +7,14 @@
 // Set default node environment to development
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
-require('v8-profiler');
+//require('v8-profiler');
+/*require('nodetime').profile({
+  accountKey: '9dbb5b7ff0e42a8b33d111f6d8dfa057d7956897', 
+  appName: 'hmm2'
+});*/
 
 var express = require('express');
 var mongoose = require('mongoose');
-var session = require('express-session');
-var MongoStore = require('connect-mongo')(session);
 var config = require('./config/environment');
 
 // Connect to database
@@ -20,11 +22,6 @@ var connection = mongoose.connect(config.mongo.uri, config.mongo.options);
 
 // Populate DB with sample data
 if(config.seedDB) { require('./config/seed'); }
-
-// Set up sessions to reuse mongoose connection
-app.use(session({
-    store: new MongoStore({ mongooseConnection: mongoose.connection })
-}));
 
 // Setup server
 var app = express();

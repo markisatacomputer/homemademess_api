@@ -18,25 +18,25 @@ var _               = require('lodash');
 var Queue = function() {
   this.stack = [];
   this.files = {};
-  this.current = false;
+  this.current = 666;
   this.up = require('./up.model');
-  this.up.on('StackEnd', this.bubble);
 }
 Queue.prototype.constructor = Queue;
+//  add original to queue
 Queue.prototype.add = function (path, id) {
   // if nothing is being processed start upload
-  if (this.current === false && this.files[id] === undefined) {
+  if (this.current === 666 && this.files[id] === undefined) {
     //  get uploads started
     this.current = id;
     this.files[id] = path;
     this.sendCurrent();
   //  otherwise add item to the stack
-  } else if (this.files[id] === undefined) {
+  } else {
     this.stack.push(id);
     this.files[id] = path;
   }
-  console.log('stack', this.stack.length);
 }
+//  get temp path of current original being processed
 Queue.prototype.getCurrentPath = function () {
   //  if there is a current return path from this.files, otherwise false
   if (this.current && this.files[this.current]) {
@@ -45,12 +45,12 @@ Queue.prototype.getCurrentPath = function () {
     return false;
   }
 }
-//  Start an Upload
+//  Initialize upload of current original
 Queue.prototype.sendCurrent = function () {
   if (this.current) {
     var self = this;
+    //  get db record
     var Image = require('../image/image.model');
-    //var i = new Image();
     Image.findById(self.current, function(err, IMG) {
       if (err) {
         console.log('DB Error - findById: ', err);
@@ -63,35 +63,41 @@ Queue.prototype.sendCurrent = function () {
     });
   }
 }
-//  Move to next upload
-Queue.prototype.bubble = function (path) {
-  console.log('StackEnd', path);
+//  Clean finished upload and move to next original
+Queue.prototype.bubble = function (id) {
+  var self = this;
+  
   //  make sure nothing funny is going on
-  if (this.current) {
+  if (self.current === id) {
     //  first clean files obj
-    delete this.files[this.current];
+    delete self.files[self.current];
     //  if stack contains items, send the first one
-    if (this.stack.length > 0) {
-      this.current = this.stack.shift();
-      this.sendCurrent();
+    if (self.stack.length > 0) {
+      self.current = self.stack.shift();
+      //  clear params so they will be reset
+      self.up.params = {};
+      self.sendCurrent();
     } else  {
-      this.current = false;
+      self.current = false;
       console.log('stack empty');
     }
   } else {
-    console.log('Something is wrong... Stack End passed path '+path+' this.current[path] is '+_.keys(this.current));
+    console.log('Something is wrong... Stack End passed id '+id+' this.current[path] is '+self.current);
   }
 }
 //  If there is a current upload, and it's record id matches, abort it
 Queue.prototype.abort = function (id) {
   var p = this.getCurrentPath();
   if (p !== false) {
-    var img = this.current[p];
-    var i = img.id ? img.id : img._id ? img._id : false;
+    var i = this.current[p];
     if (id === i) {
       this.up.abort();
     }
   }
 }
 
-module.exports = new Queue();
+var q = new Queue();
+//  Add listener for bubble
+q.up.on('StackEnd', function (id) { q.bubble(id); });
+
+module.exports = q;

@@ -106,15 +106,15 @@ exports.index = function(req, res) {
   // temporary - let's make it an hour limit
   i.temporary = Date.now() + 3600000;
   // get exif metadata
-  getExif(file.path).then(function (exif){
+  //getExif(file.path).then(function (exif){
     // save orientation
-    i.orientation = exif.image.Orientation;
+    //i.orientation = exif.image.Orientation;
     // save create date if existing
-    i.createDate = getValidDate(exif);
+    //i.createDate = getValidDate(exif);
     // now process the individual exif metadata tags
-    saveExifTags(exif).then(function (exifrefs){
+    //saveExifTags(exif).then(function (exifrefs){
       // attach exif to image record
-      i.exif = exifrefs;
+      //i.exif = exifrefs;
       // save the image to db
       i.save(function (err) {
         if (err) {
@@ -126,6 +126,6 @@ exports.index = function(req, res) {
         // pass back our image db record
         return res.json(200, i);
       });
-    });
-  });
+    //});
+  //});
 };
