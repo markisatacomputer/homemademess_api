@@ -7,12 +7,6 @@
 // Set default node environment to development
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
-//require('v8-profiler');
-/*require('nodetime').profile({
-  accountKey: '9dbb5b7ff0e42a8b33d111f6d8dfa057d7956897', 
-  appName: 'hmm2'
-});*/
-
 var express = require('express');
 var mongoose = require('mongoose');
 var config = require('./config/environment');
