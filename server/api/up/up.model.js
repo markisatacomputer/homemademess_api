@@ -30,6 +30,7 @@ var Upload = function(file, IMG, params) {
   this.IMG = typeof IMG !== 'undefined' ?  IMG : {id: 0};
   this.params = typeof params !== 'undefined' ? params : {};
   this.derivative = {};
+  this.derivatives = [];
   this.derivativeSizes = [
     {name: 'sm', size: [300,600]},
     {name: 'md', size: [600,1200]},
@@ -44,11 +45,12 @@ Upload.prototype.constructor = Upload;
 
 Upload.prototype.send = function() {
   var self = this;
-
-  self.upOriginal().then( function() {
-    self.imageOrient().then(function(){
-      self.upAllDerivatives().then(function(){
-        self.emit('StackEnd', self.IMG.id);
+  self.imageOrient().then(function(){
+    self.createThumbs().then(function(){
+      self.upOriginal().then( function() {
+        self.upAllDerivatives().then(function(){
+          self.emit('StackEnd', self.IMG.id);
+        });
       });
     });
   });
@@ -133,9 +135,11 @@ Upload.prototype.upDerivative = function() {
 
   return deferred.promise;
 }
-Upload.prototype.upAllDerivatives = function(derivs, def) {
+//  Create all thumbs and store them in the object
+Upload.prototype.createThumbs = function(derivs, def) {
   var self = this;
-  var deferred, derivatives;
+  var deferred, derivatives, derivative;
+  //  init promise
   if (typeof(def) === 'undefined') {
     deferred = Q.defer();
   } else {
@@ -144,38 +148,100 @@ Upload.prototype.upAllDerivatives = function(derivs, def) {
 
   //  init derivatives
   if (typeof(derivs) === 'undefined') {
+    //  make sure the object store is empty
+    self.derivatives = [];
+    //  clone template
     derivatives = _.clone(self.derivativeSizes, true);
-    self.upAllDerivatives(derivatives, deferred);
+    self.createThumbs(derivatives, deferred);
   } else {
     derivatives = derivs;
+    //  create thumb and add result to object store 
     self.derivative = derivatives.shift();
+    self.createThumb(derivative, deferred.reject).then( function() {
+      self.derivatives.push(self.derivative);
+      //  are we done or do we keep going?
+      if (derivatives.length > 0) {
+        self.createThumbs(derivatives, deferred);
+      } else {
+        deferred.resolve(true);
+      }
+    });
+  }
+
+  return deferred.promise;
+}
+Upload.prototype.createThumb = function (derivative) {
+  var self = this;
+  var deferred = Q.defer();
+  // use orientation fixed file to determine size
+  var img = gm(self.file+ '-oriented');
+  var thumbSize = self.derivative.size;
+  var file = self.IMG.id + '-' + self.derivative.name;
+
+  // image is vertical we use height
+  if (self.IMG.width < self.IMG.height) {
+    // resize
+    img.resize(null,thumbSize[1]);
+    // store measurements for db
+    self.derivative.height = thumbSize[1];
+    self.derivative.width = Math.round((thumbSize[1]/self.IMG.height)*self.IMG.width);
+  // image is horizontal or square we use width
+  } else {
+    // resize
+    img.resize(null, thumbSize[0]);
+    // store measurements for db
+    self.derivative.height = thumbSize[0];
+    self.derivative.width = Math.round((thumbSize[0]/self.IMG.height)*self.IMG.width);
+  }
+
+  img.compress('JPEG').quality(60).write(file, function (err, stdout, stderr) {
+    self.derivative.file = file;
+    if (err) {
+      deferred.reject(err);
+    }
+    deferred.resolve(file);
+  });
+
+  return deferred.promise;
+}
+Upload.prototype.upAllDerivatives = function(def) {
+  var self = this;
+  var deferred;
+  // init promise
+  if (typeof(def) === 'undefined') {
+    deferred = Q.defer();
+  } else {
+    deferred = def;
+  }
+
+  //  init derivatives
+  if (self.derivatives.length > 0) {
+    self.derivative = self.derivatives.shift();
     // process the size  - thumb, upload, cleanup - then continue or resolve
-    self.createThumb(self.derivative, deferred.reject).then( function() {
-      self.upDerivative().then( function(){
-        self.cleanup(self.derivative.file).then( function(cleaned){
-          //  save derivative to db
-          self.IMG.derivative.push({
-            height: self.derivative.height,
-            width: self.derivative.width,
-            uri: self.derivative.uri
-          });
-          self.IMG.save(function(err){
-            if (err) {
-              console.log('DB error', err);
-            }
-          });
-          if (cleaned) {
-            //  more?  then continue
-            if (derivatives.length > 0) {
-              self.upAllDerivatives(derivatives, deferred);
-            } else {
-              self.derivative = {};
-              deferred.resolve(true);
-            }
-          }
-        }, function (e){
-          deferred.reject(e);
+    self.upDerivative().then( function(){
+      self.cleanup(self.derivative.file).then( function(cleaned){
+        //  save derivative to db
+        self.IMG.derivative.push({
+          height: self.derivative.height,
+          width: self.derivative.width,
+          uri: self.derivative.uri
         });
+        self.IMG.save(function(err){
+          if (err) {
+            console.log('DB error', err);
+          }
+        });
+        if (cleaned) {
+          //  more?  then continue
+          if (self.derivatives.length > 0) {
+            self.upAllDerivatives(deferred);
+          } else {
+            self.derivative = {};
+            deferred.resolve(true);
+          }
+        }
+      }, function (e){
+        deferred.reject(e);
       });
     });
   }
@@ -211,41 +277,6 @@ Upload.prototype.imageOrient = function () {
     });
   });
   
-  return deferred.promise;
-}
-
-Upload.prototype.createThumb = function () {
-  var self = this;
-  var deferred = Q.defer();
-  // use orientation fixed file to determine size
-  var img = gm(self.file+ '-oriented');
-  var thumbSize = self.derivative.size;
-  var file = self.IMG.id + '-' + self.derivative.name;
-
-  // image is vertical we use height
-  if (self.IMG.width < self.IMG.height) {
-    // resize
-    img.resize(null,thumbSize[1]);
-    // store measurements for db
-    self.derivative.height = thumbSize[1];
-    self.derivative.width = Math.round((thumbSize[1]/self.IMG.height)*self.IMG.width);
-  // image is horizontal or square we use width
-  } else {
-    // resize
-    img.resize(null, thumbSize[0]);
-    // store measurements for db
-    self.derivative.height = thumbSize[0];
-    self.derivative.width = Math.round((thumbSize[0]/self.IMG.height)*self.IMG.width);
-  }
-
-  img.compress('JPEG').quality(60).write(file, function (err, stdout, stderr) {
-    self.derivative.file = file;
-    if (err) {
-      deferred.reject(err);
-    }
-    deferred.resolve(stdout);
-  });
-
   return deferred.promise;
 }
 
