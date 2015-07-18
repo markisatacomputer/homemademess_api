@@ -5,7 +5,7 @@ angular.module 'hmm2App'
   ###
         DROPZONE
   ###
-  
+  $scope.filesInProgress = {}
   #   Config
   $scope.dropzoneConfig = {
     url: '/up'
@@ -18,8 +18,8 @@ angular.module 'hmm2App'
       this.on 'dragover', $scope.dragover
       this.on 'dragleave', $scope.dragleave
       this.on 'drop', $scope.dragleave
-      this.on 'addedfile', $scope.filechange
-      this.on 'removedfile', $scope.filechange
+      this.on 'addedfile', $scope.fileAdd
+      this.on 'removedfile', $scope.updateDZClass
       this.on 'success', $scope.success
       $scope.dz = this
   }
@@ -30,7 +30,10 @@ angular.module 'hmm2App'
   $scope.dragleave = (event) ->
     $ 'div.drop' 
     .removeClass 'over'
-  $scope.filechange = (file) ->
+  $scope.fileAdd = (file) ->
+    $scope.filesInProgress.saveAll = false
+    $scope.updateDZClass()
+  $scope.updateDZClass = (file) ->
     images = $('div.drop form[name="image-details"]').children()
     if $.isEmptyObject images
       $('div.drop').removeClass 'notempty'
@@ -43,17 +46,18 @@ angular.module 'hmm2App'
     imageId = if image.id then image.id else image._id
     $scope.files[imageId] = image
     socket.syncUpdatesObj 'image', $scope.files
-    socket.syncUploadProgress imageId, $scope.filesInProgress, (event, item, obj) ->
-      #  on complete, check to see if all files are done so we can show the save button
-      if event == 'complete'
-        $scope.filesDone[item] = 100
-        if angular.equals $scope.filesDone, $scope.filesInProgress
-          $ '#save-all'
-          .addClass 'ready'
-    
     #  Make sure when new files are added we hide the save button until they're done uploading
     $ '#save-all'
     .removeClass 'ready'
+    socket.syncUploadProgress imageId, $scope.filesInProgress, (event, itemID, obj) ->
+      #  on complete, check to see if all files are done so we can show the save button
+      if event == 'upload complete'
+        $ '#save-all'
+        .addClass 'ready'
+      else
+        $ '#save-all'
+        .removeClass 'ready'
+    
     #  Image orientation class
     if image.orientation
       $ file.previewElement 
@@ -99,8 +103,6 @@ angular.module 'hmm2App'
   
   #  Init vars
   $scope.files = {}
-  $scope.filesInProgress = {}
-  $scope.filesDone = {}
   $scope.allDone = false;
   $scope.fileSelected = []
   $scope.imageTitle = ''

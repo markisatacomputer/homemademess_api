@@ -90,7 +90,7 @@ angular.module('hmm2App')
         /*
         Syncs removed items on 'model:remove'
          */
-        return socket.on(modelName + ':remove', function(item) {
+        socket.on(modelName + ':remove', function(item) {
           var event;
           event = 'deleted';
           delete obj[item._id];
@@ -122,12 +122,19 @@ angular.module('hmm2App')
         /*
         Syncs removed items on 'id:complete'
          */
-        return socket.on(id + ':complete', function() {
+        socket.on(id + ':complete', function() {
           var event;
           event = 'complete';
-          obj[id] = 100;//delete obj[id];
+          obj[id] = 100;
           cb(event, id, obj);
         });
+
+        socket.on('all:complete', function() {
+          var event = 'upload complete';
+          obj['saveAll'] = true;
+          cb(event, id, obj);
+        });
+
       },
 
       /**

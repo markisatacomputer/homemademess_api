@@ -78,9 +78,9 @@ Queue.prototype.bubble = function (id) {
       self.up.params = {};
       self.sendCurrent();
     } else  {
-      self.current = false;
-      console.log('stack empty');
+      self.current = 666;
     }
+    return self.current;
   } else {
     console.log('Something is wrong... Stack End passed id '+id+' this.current[path] is '+self.current);
   }
@@ -96,8 +96,4 @@ Queue.prototype.abort = function (id) {
   }
 }
 
-var q = new Queue();
-//  Add listener for bubble
-q.up.on('StackEnd', function (id) { q.bubble(id); });
-
-module.exports = q;
+module.exports = new Queue();
