@@ -16,7 +16,10 @@ aws.config.endpoint = process.env.AWS_ENDPOINT;
 
 // Get list of images
 exports.index = function(req, res) {
-  Image.find(function (err, images) {
+  var projection = {
+    exif: 0
+  }
+  Image.find({}, projection, function (err, images) {
     if(err) { return handleError(res, err); }
     return res.json(200, images);
   });
