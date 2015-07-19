@@ -6,7 +6,6 @@ An image management tool for me.
 TODO (before view)
 ---------------------
 
-+  Delete derivatives from S3 on db delete Image
 +  Finish upload on S3completion
   +  remove tmp files
 +  cleanup unsaved (aka image.temporary < Date.now ) from S3 
@@ -19,9 +18,10 @@ TODO (in parallel with view)
 ---------------------
 
 +  Move editor into its own scope for reuse
-+  create derivatives in upload class
++  click-drag select
 +  model for derivative transformations
 +  think about toning down(/gutting) dropzone styles
++  remove home & user
 
 
 
