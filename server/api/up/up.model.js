@@ -191,7 +191,8 @@ Upload.prototype.upDerivative = function() {
     params = {
       Bucket: process.env.AWS_THUMB_BUCKET,
       Key: self.derivative.key,
-      Body: fs.createReadStream(self.derivative.file)
+      Body: fs.createReadStream(self.derivative.file),
+      ACL: 'public-read'
     }
     var S3 = self.getS3(params);
     //  send
