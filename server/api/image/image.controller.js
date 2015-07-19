@@ -19,7 +19,7 @@ exports.index = function(req, res) {
   var projection = {
     exif: 0
   }
-  Image.find({}, projection, function (err, images) {
+  Image.find({}, projection).populate('tags').exec( function (err, images) {
     if(err) { return handleError(res, err); }
     return res.json(200, images);
   });
