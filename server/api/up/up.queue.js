@@ -77,12 +77,13 @@ Queue.prototype.bubble = function (id) {
       //  clear params so they will be reset
       self.up.params = {};
       self.sendCurrent();
+    //  if stack is empty, reset current indicator
     } else  {
       self.current = 666;
     }
     return self.current;
   } else {
-    console.log('Something is wrong... Stack End passed id '+id+' this.current[path] is '+self.current);
+    console.log('Something is wrong... Stack End passed id '+id+' this.current is '+self.current);
   }
 }
 //  If there is a current upload, and it's record id matches, abort it
@@ -92,8 +93,12 @@ Queue.prototype.abort = function (id) {
     var i = this.current[p];
     if (id === i) {
       this.up.abort();
+      //  move on to the next if it exists
+      this.bubble(id);
     }
   }
 }
 
-module.exports = new Queue();
+var ex = new Queue();
+
+module.exports = ex;
