@@ -30,5 +30,7 @@ Notes for the future
 ---------------------
 
 +  image manipulation?  watermarking?
++  continue unfinished upload?
++  save upload state on navigation?
 +  https://github.com/Automattic/node-canvas
 
