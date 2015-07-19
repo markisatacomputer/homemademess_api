@@ -65,7 +65,7 @@ function edit (im) {
 function save (id) {
   console.log('save - id', id);
   // find record
-  image.findByIdAndUpdate(id, {$unset: {temporary: ""}}, function (err, i) {
+  image.update({_id: id}, {temporary: 0}, function (err, i) {
     if(err) { console.log (err); }
     console.log(i);
   });
