@@ -54,6 +54,8 @@ Upload.prototype.send = function() {
       var originalPromise = self.upOriginal();
       var derivativesPromise = self.upAllDerivatives();
       Q.all([originalPromise, derivativesPromise]).then( function() {
+        //  cleanup oriented file
+        self.cleanup(self.file+'-oriented');
         //  empty S3 store
         self.S3 = [];
         self.progress.loaded = {};
