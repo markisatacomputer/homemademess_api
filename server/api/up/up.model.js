@@ -338,9 +338,5 @@ Upload.prototype.abort = function () {
 }
 
 var up = new Upload();
-up.setMaxListeners(0);
-up.on('newListener', function(listener){
-  console.log('newListener', listener);
-});
 
 module.exports = up;
