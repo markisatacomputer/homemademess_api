@@ -10,6 +10,7 @@ angular.module 'hmm2App', [
   'ngDropzone'
   'ngTagsInput'
   'akoenig.deckgrid'
+  'ngLodash'
 ]
 .config ($stateProvider, $urlRouterProvider, $locationProvider, $httpProvider) ->
   $urlRouterProvider
