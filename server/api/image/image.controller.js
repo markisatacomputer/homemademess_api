@@ -14,18 +14,26 @@ var Image = require('./image.model');
 var aws = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
 
-// Get list of images
+// Get list of all images
 exports.index = function(req, res) {
-  var projection, conditions;
+  var projection, conditions, allTags;
   projection = {
     exif: 0
   }
   conditions = {
     temporary: 0 //  turn off for debug
   }
-  Image.find(conditions, projection).populate('tags').exec( function (err, images) {
+  Image.find(conditions, projection).populate('tags', 'text -_id').lean().exec( function (err, images) {
     if(err) { return handleError(res, err); }
-    return res.json(200, images);
+    // transform tags
+    allTags = [];
+    _.each(images, function(image, i){
+      // transform tags to simple array
+      images[i].tags = _.map(image.tags, 'text');
+      // collect all tags in one array
+      allTags = _.union(allTags, images[i].tags);
+    });
+    return res.json(200, {images: images, tags: allTags });
   });
 };
 
