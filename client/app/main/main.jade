@@ -3,14 +3,14 @@ div(ng-include='"components/navbar/navbar.html"')
 .container
   .row
     .deckgrid(deckgrid, source='images')
-      div.image
+      div.image(ng-class='{{card.tags}}')
         img.img-responsive(src='{{card.derivative[0].uri}}')
         div.pre-scrollable {{card}}
 
 footer.footer
   .container
     p
-      | Homemademess.com
+      | homemademess.com
       = ' | '
       a(href='https://github.com/markisatacomputer/homemademess') github
      
