@@ -17,7 +17,8 @@
     "angular-ui-router": "~0.2.10",
     "dropzone": "~4.0.1",
     "angular-dropzone": "~0.1.2",
-    "ng-tags-input": "~2.3.0"
+    "ng-tags-input": "~2.3.0",
+    "angular-mosaic": "~1.0.0"
   },
   "devDependencies": {
     "angular-mocks": ">=1.2.*",
