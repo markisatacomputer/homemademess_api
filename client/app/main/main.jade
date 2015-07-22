@@ -2,10 +2,10 @@ div(ng-include='"components/navbar/navbar.html"')
 
 .container
   .row
-    .col-lg-12
-      div.col-md-4.col-lg-4.col-sm-6.col-xs-12(ng-repeat='image in images')
-        img.img-responsive(src='{{image.derivative[0].uri}}')
-        div.pre-scrollable {{image}}
+    .deckgrid(deckgrid, source='images')
+      div.image
+        img.img-responsive(src='{{card.derivative[0].uri}}')
+        div.pre-scrollable {{card}}
 
 footer.footer
   .container
