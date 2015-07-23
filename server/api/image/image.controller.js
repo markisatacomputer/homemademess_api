@@ -29,7 +29,9 @@ exports.index = function(req, res) {
     allTags = [];
     _.each(images, function(image, i){
       // transform tags to simple array
-      images[i].tags = _.map(image.tags, 'text');
+      images[i].tags = _.map(image.tags, function(tag){
+        return tag.text.replace(' ', '_');
+      });
       // collect all tags in one array
       allTags = _.union(allTags, images[i].tags);
     });
