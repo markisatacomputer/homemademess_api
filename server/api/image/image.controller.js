@@ -17,23 +17,35 @@ aws.config.endpoint = process.env.AWS_ENDPOINT;
 // Get list of all images
 exports.index = function(req, res) {
   var projection, conditions, allTags;
+  //  don't include exif - please it's just too much
   projection = {
     exif: 0
   }
   conditions = {
     temporary: 0 //  turn off for debug
   }
-  Image.find(conditions, projection).populate('tags', 'text -_id').lean().exec( function (err, images) {
+  //  if there is a query, let's parse it
+  if (req.query) {
+    //  construct tags query condition
+    if (req.query.hasOwnProperty('tags')) {
+      //  make sure we're working with an array
+      if (!Array.isArray(req.query.tags)) {
+        req.query.tags = [req.query.tags];
+      }
+      conditions.tags = { $in: req.query.tags };
+    }
+  }
+  Image.find(conditions, projection).populate('tags', 'text').lean().exec( function (err, images) {
     if(err) { return handleError(res, err); }
     // transform tags
     allTags = [];
     _.each(images, function(image, i){
+      // collect all tags in one array
+      allTags = _.union(allTags, image.tags);
       // transform tags to simple array
       images[i].tags = _.map(image.tags, function(tag){
         return tag.text.replace(' ', '_');
       });
-      // collect all tags in one array
-      allTags = _.union(allTags, images[i].tags);
     });
     return res.json(200, {images: images, tags: allTags });
   });

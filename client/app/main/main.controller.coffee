@@ -2,12 +2,13 @@
 
 angular.module 'hmm2App'
 .controller 'MainCtrl', ($scope, $http, socket) ->
-  $scope.awesomeThings = []
-
+  # init view
+  $scope.view = {}
+  
   $http.get('/api/images').success (result) ->
-    $scope.images = result.images
-    $scope.tags = result.tags
-    $scope.offset = 0;
+    $scope.view.images = result.images
+    $scope.view.tags = result.tags
+    $scope.view.offset = 0;
 
   $scope.$on '$destroy', ->
     socket.unsyncUpdates 'thing'

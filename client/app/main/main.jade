@@ -1,10 +1,9 @@
 div(ng-include='"components/navbar/navbar.html"')
 
 .container
-  .deckgrid(deckgrid, source='images')
+  .deckgrid(deckgrid, source='view.images')
     div.image(ng-class='{{card.tags}}')
       img.img-responsive(src='{{card.derivative[0].uri}}')
-      div.pre-scrollable {{card}}
 
 footer.footer
   .container

@@ -190,9 +190,6 @@ angular.module 'hmm2App'
         $ '#'+id
         .remove()
 
-  #  When uploads are done show the save button
-
-  
   #  Tag-Input Events
   $scope.tagAdded = (tag) ->
     #  create new tag if it doesn't exist

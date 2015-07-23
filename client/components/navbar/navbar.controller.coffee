@@ -1,7 +1,8 @@
 'use strict'
 
 angular.module 'hmm2App'
-.controller 'NavbarCtrl', ($scope, $location, Auth, $resource) ->
+.controller 'NavbarCtrl', ($scope, $location, Auth, $resource, lodash, $q) ->
+  $scope.tags = []
   $scope.menu = [
     {
       title: 'admin'
@@ -11,7 +12,6 @@ angular.module 'hmm2App'
       title: 'users'
       link: '/users'
     }
-
   ]
   $scope.isCollapsed = true
   $scope.isLoggedIn = Auth.isLoggedIn
@@ -26,9 +26,17 @@ angular.module 'hmm2App'
     #console.log $location.path()
     route is $location.path()
 
-  #  Tag-Input Events
+  #  Map tags to simple array
+  $scope.mapTags = (tags) ->
+    # return an array of unique values
+    lodash.uniq lodash.map tags, '_id'
+  
+  #  Action to take when tags change
+  Images = $resource '/api/images'
   $scope.redoSearch = () ->
-    console.log $scope.tags
+    Images.get { tags: $scope.mapTags $scope.tags }, (result) ->
+      $scope.view.images = result.images
+
   #  Autocomplete
   Auto = $resource '/api/auto'
   $scope.findTags = (query) ->
