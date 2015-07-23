@@ -3,8 +3,15 @@
 angular.module 'hmm2App'
 .controller 'NavbarCtrl', ($scope, $location, Auth) ->
   $scope.menu = [
-    title: 'Home'
-    link: '/'
+    {
+      title: 'admin'
+      link: '/admin'
+    }
+    {
+      title: 'users'
+      link: '/users'
+    }
+
   ]
   $scope.isCollapsed = true
   $scope.isLoggedIn = Auth.isLoggedIn
@@ -13,7 +20,8 @@ angular.module 'hmm2App'
 
   $scope.logout = ->
     Auth.logout()
-    $location.path '/login'
+    $location.path '/'
 
   $scope.isActive = (route) ->
+    #console.log $location.path()
     route is $location.path()
