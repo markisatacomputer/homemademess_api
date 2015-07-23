@@ -11,7 +11,7 @@ div.navbar.navbar-default.navbar-fixed-top(ng-controller='NavbarCtrl', ng-class=
       ul.nav.navbar-nav
         li.navbar-form(ng-show='isActive("/")' role='search', ng-class='{active: isActive(item.link)}')
           tags-input(ng-model="tags", title="Tags", replace-spaces-with-dashes="false", on-tag-added="redoSearch()", on-tag-removed="redoSearch()")
-          auto-complete(source="findTags($query)")
+            auto-complete(source="findTags($query)")
         li.dropdown(ng-show='isAdmin()')
           a.dropdown-toggle(role='button' data-toggle="dropdown" aria-haspopup="true" aria-expanded="false") Do Stuff
             span.caret
