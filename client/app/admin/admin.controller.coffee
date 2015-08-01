@@ -45,7 +45,14 @@ angular.module 'hmm2App'
     image = res
     imageId = if image.id then image.id else image._id
     $scope.files[imageId] = image
-    socket.syncUpdatesObj 'image', $scope.files
+    #  sync socket events to $scope.files
+    socket.syncUpdatesObj 'image', $scope.files, (event,item,obj) ->
+      #  callback on emit
+      if event == 'updated' and item.orientation
+        #  add Image orientation class
+        $ '#'+item._id
+        .find '.dz-image'
+        .addClass 'image-orientation-' + item.orientation
     #  Make sure when new files are added we hide the save button until they're done uploading
     $ '#save-all'
     .removeClass 'ready'
@@ -57,12 +64,7 @@ angular.module 'hmm2App'
       else
         $ '#save-all'
         .removeClass 'ready'
-    
-    #  Image orientation class
-    if image.orientation
-      $ file.previewElement 
-      .find '.dz-image'
-      .addClass 'image-orientation-' + image.orientation
+      
     #  Select listener
     if imageId
       $ file.previewElement
