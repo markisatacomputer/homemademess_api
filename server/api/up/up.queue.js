@@ -14,7 +14,6 @@
 'use strict';
 
 var _      = require('lodash');
-var exif   = require('./up.exif');
 
 var Queue = function() {
   this.stack = [];
@@ -61,8 +60,6 @@ Queue.prototype.sendCurrent = function () {
         self.up.IMG = IMG;
         self.up.id = IMG.id;
         self.up.send();
-        //  Get the exif and save
-        exif.extract(self.getCurrentPath(), IMG);
       }
     });
   }
@@ -95,10 +92,15 @@ Queue.prototype.abort = function (id) {
   var p = this.getCurrentPath();
   if (p !== false) {
     var i = this.current[p];
+    //  if current queue, abort and move on
     if (id === i) {
       this.up.abort();
       //  move on to the next if it exists
       this.bubble(id);
+    //  if not, remove from queue
+    } else {
+      delete this.files[id]
+      delete this.stack[_.find(this.stack, id)];
     }
   }
 }
