@@ -206,8 +206,8 @@ angular.module 'hmm2App'
   $scope.tagRemoved = (tag) ->
     $scope.removeTagFromSelected tag
   #  Autocomplete
-  $scope.findTags = (query) ->
-    return Auto.query(query).$promise
+  $scope.findTags = (value) ->
+    return Auto.query({q:value}).$promise
   #  Add Tags
   $scope.addTagtoSelected = (tag) ->
     angular.forEach $scope.fileSelected, (id, key) ->
