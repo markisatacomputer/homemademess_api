@@ -13,7 +13,8 @@
 
 'use strict';
 
-var _               = require('lodash');
+var _      = require('lodash');
+var exif   = require('./up.exif');
 
 var Queue = function() {
   this.stack = [];
@@ -55,10 +56,13 @@ Queue.prototype.sendCurrent = function () {
       if (err) {
         console.log('DB Error - findById: ', err);
       } else {
+        //  Send this image
         self.up.file = self.getCurrentPath();
         self.up.IMG = IMG;
         self.up.id = IMG.id;
         self.up.send();
+        //  Get the exif and save
+        exif.extract(self.getCurrentPath(), IMG);
       }
     });
   }
