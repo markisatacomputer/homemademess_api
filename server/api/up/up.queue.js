@@ -13,7 +13,8 @@
 
 'use strict';
 
-var _      = require('lodash');
+var _   = require('lodash');
+var Q   = require('q');
 
 var Queue = function() {
   this.stack = [];
@@ -67,6 +68,7 @@ Queue.prototype.sendCurrent = function () {
 //  Clean finished upload and move to next original
 Queue.prototype.bubble = function (id) {
   var self = this;
+  var deferred = Q.defer();
   
   //  make sure nothing funny is going on
   if (self.current === id) {
@@ -75,6 +77,7 @@ Queue.prototype.bubble = function (id) {
     //  if stack contains items, send the first one
     if (self.stack.length > 0) {
       self.current = self.stack.shift();
+
       //  clear params so they will be reset
       self.up.params = {};
       self.sendCurrent();
@@ -82,10 +85,12 @@ Queue.prototype.bubble = function (id) {
     } else  {
       self.current = 666;
     }
-    return self.current;
+    deferred.resolve(self.current);
   } else {
     console.log('Something is wrong... Stack End passed id '+id+' this.current is '+self.current);
   }
+
+  return deferred.promise;
 }
 //  If there is a current upload, and it's record id matches, abort it
 Queue.prototype.abort = function (id) {
@@ -99,8 +104,8 @@ Queue.prototype.abort = function (id) {
       this.bubble(id);
     //  if not, remove from queue
     } else {
-      delete this.files[id]
-      delete this.stack[_.find(this.stack, id)];
+      delete this.files[id];
+      _.pull(this.stack, id);
     }
   }
 }
