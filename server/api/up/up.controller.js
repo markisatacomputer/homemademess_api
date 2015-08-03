@@ -2,6 +2,7 @@
 
 var Queue = require('./up.queue');
 var Image = require('../image/image.model');
+var exif   = require('./up.exif');
 
 /*      Process upload
  *
@@ -27,6 +28,8 @@ exports.index = function(req, res) {
     }
     //  add file to upload queue
     Queue.add(file.path, i.id);
+    //  Get the exif and save
+    exif.extract(file.path, i);
     // pass back our image db record
     return res.json(200, i);
   });
