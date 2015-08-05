@@ -77,14 +77,15 @@ function getValidDate(exif) {
   while (!d && acceptedExif.length > 0) {
     d = _.get(exif,acceptedExif.shift(),'yo');
   }
-  if (d) {
+  //  if we found one let's return it in the right format
+  if (d && d != 'yo') {
     d = d.split(/[\s:]/);
     if (Array.isArray(d)) {
       return Date.UTC.apply(null, d);
     }
-  } else {
-    return 0; // Date.now();
   }
+  //  no?  send a big ol 0
+  return 0;
 }
 
 exports.extract = function (path, IMG) {
