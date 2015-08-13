@@ -18,8 +18,6 @@ module.exports = function(app) {
 
   //  Auth
   app.use('/auth', require('./auth'));
-  //  Github Webhook
-  app.use('/postrecieve', require('./githubhook'));
 
   // All other routes should return an error
   app.route('/*')
