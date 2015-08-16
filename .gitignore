@@ -4,3 +4,4 @@ node_modules
 .idea
 dist
 /server/config/local.env.js
+/server/config/seed.js
