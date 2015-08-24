@@ -37,7 +37,7 @@ var ImageSchema = new Schema({
   },
   uploadDate: {
     type: Number,
-    default: 0
+    default: Date.now()
   },
   temporary: {
     type: Number,
