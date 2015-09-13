@@ -35,7 +35,7 @@ exports.index = function(req, res) {
       conditions.tags = { $in: req.query.tags };
     }
   }
-  Image.find(conditions, projection).populate('tags', 'text').lean().exec( function (err, images) {
+  Image.find(conditions, projection).sort({createDate: 'desc'}).populate('tags', 'text').lean().exec( function (err, images) {
     if(err) { return handleError(res, err); }
     // transform tags
     allTags = [];
