@@ -10,7 +10,11 @@ exports.tagged = function(req, res) {
   Tag.find({text: tag}, function(err, tags){
     if(err) { return res.json({status: 500}); }
     if(!tags) { return res.json({status:404}); }
-    //  no repeats in our results please... there shouldn't be any anyway
+    //  no exif please
+    projection = {
+      exif: 0
+    }
+    // set up tags condition
     conditions.tags = { $in: tags };
     Image.find(conditions, projection).sort({createDate: 'desc'}).populate('tags', 'text').lean().exec( function (err, images) {
       if(err) { return handleError(res, err); }
