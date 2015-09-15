@@ -11,7 +11,7 @@ exports.tagged = function(req, res) {
     if(err) { return res.json({status: 500}); }
     if(!tags) { return res.json({status:404}); }
     //  no repeats in our results please... there shouldn't be any anyway
-    conditions.tags = { $in: req.query.tags };
+    conditions.tags = { $in: tags };
     Image.find(conditions, projection).sort({createDate: 'desc'}).populate('tags', 'text').lean().exec( function (err, images) {
       if(err) { return handleError(res, err); }
       // transform tags
