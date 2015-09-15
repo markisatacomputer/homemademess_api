@@ -15,6 +15,9 @@ exports.tagged = function(req, res) {
       exif: 0
     }
     // set up tags condition
+    conditions = {
+      temporary: 0 //  turn off for debug
+    }
     conditions.tags = { $in: tags };
     Image.find(conditions, projection).sort({createDate: 'desc'}).populate('tags', 'text').lean().exec( function (err, images) {
       if(err) { return handleError(res, err); }
