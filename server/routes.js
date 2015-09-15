@@ -11,6 +11,7 @@ module.exports = function(app) {
   // API routes
   app.use('/images', require('./api/image'));
   app.use('/tags', require('./api/tag'));
+  app.use('/tagged', require('./api/tagged'));
   app.use('/auto', require('./api/auto'));
   app.use('/things', require('./api/thing'));
   app.use('/users', require('./api/user'));
