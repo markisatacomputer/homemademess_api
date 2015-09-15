@@ -5,7 +5,7 @@ var Tag = require('../tag/tag.model');
 var Image = require('../image/image.model');
 
 exports.tagged = function(req, res) {
-  var tag = req.params.tag;
+  var projection, conditions, allTags, tag = req.params.tag;
   tag = tag.replace('_', ' ');
   Tag.find({text: tag}, function(err, tags){
     if(err) { return res.json({status: 500}); }
