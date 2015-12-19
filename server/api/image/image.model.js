@@ -75,6 +75,19 @@ ImageSchema.post('remove', function (doc) {
       console.log('image:remove derivative', path);
     });
   });
+
+  // remove image refs from tags
+  Tag.find({_images: {$elemMatch: {$eq: doc._id}}}).then(function(tag){
+    unset(tag._images[doc._id]);
+    tag.save();
+  });
+});
+
+ImageSchema.post('save', function (doc) {
+  // add image refs to tags
+  _.forEach(doc.tags, function(tag){
+    Tag.findByIdAndUpdate(tag, {$addToSet: {_images: [doc._id]}});
+  });
 });
 
 module.exports = mongoose.model('Image', ImageSchema);
