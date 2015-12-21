@@ -5,10 +5,10 @@ var aws = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
 var url = require('url');
 var Queue = require('../up/up.queue');
+var Tag = require('../tag/tag.model');
 var mongoose = require('mongoose'),
-  Schema = mongoose.Schema;
-
-var ObjectId = Schema.Types.ObjectId
+  Schema = mongoose.Schema,
+  ObjectId = Schema.Types.ObjectId;
 
 var ImageSchema = new Schema({
   name: String,
@@ -78,15 +78,26 @@ ImageSchema.post('remove', function (doc) {
 
   // remove image refs from tags
   Tag.find({_images: {$elemMatch: {$eq: doc._id}}}).then(function(tag){
-    unset(tag._images[doc._id]);
-    tag.save();
+    var imagerefs = tag._images;
+    unset(imagerefs[doc._id]);
+    tag.update({$set: {_images:imagerefs}});
   });
 });
 
 ImageSchema.post('save', function (doc) {
   // add image refs to tags
   _.forEach(doc.tags, function(tag){
-    Tag.findByIdAndUpdate(tag, {$addToSet: {_images: [doc._id]}});
+    Tag.findOne({_id: tag}, function(err, t){
+      if (err) {
+          console.log('error finding tag ('+tag+'): ', e);
+        } else if (t) {
+          if (t._images) {
+            t.update({$addToSet: {_images: [doc._id]}}).exec();
+          } else {
+            t.update({$set: {_images: [doc._id]}}).exec();
+          }
+        }
+    });
   });
 });
 
