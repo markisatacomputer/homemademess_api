@@ -46,11 +46,12 @@ var ImageSchema = new Schema({
 });
 
 ImageSchema.post('remove', function (doc) {
+  console.log('remove');
   var ds = doc.derivative;
   var s3 = new aws.S3();
   var id = doc.id;
 
-   // abort managed upload if necessary - logic in queue object
+  // abort managed upload if necessary - logic in queue object
   Queue.abort(id);
 
   //  remove ORIGINAL from s3 bucket
@@ -77,10 +78,15 @@ ImageSchema.post('remove', function (doc) {
   });
 
   // remove image refs from tags
-  Tag.find({_images: {$elemMatch: {$eq: doc._id}}}).then(function(tag){
-    var imagerefs = tag._images;
-    unset(imagerefs[doc._id]);
-    tag.update({$set: {_images:imagerefs}});
+  Tag.find({_images: id }, function(err, tags){
+    _.forEach(tags, function(tag){
+      _.forEach(tag._images, function(imageid, i){
+        if (imageid == id) {
+          tag._images.splice(i,1);
+        }
+        tag.save();
+      });
+    });
   });
 });
 
@@ -92,7 +98,7 @@ ImageSchema.post('save', function (doc) {
           console.log('error finding tag ('+tag+'): ', e);
         } else if (t) {
           if (t._images) {
-            t.update({$addToSet: {_images: [doc._id]}}).exec();
+            t.update({$addToSet: {_images: doc._id}}).exec();
           } else {
             t.update({$set: {_images: [doc._id]}}).exec();
           }
