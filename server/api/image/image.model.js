@@ -95,14 +95,14 @@ ImageSchema.post('save', function (doc) {
   _.forEach(doc.tags, function(tag){
     Tag.findOne({_id: tag}, function(err, t){
       if (err) {
-          console.log('error finding tag ('+tag+'): ', e);
-        } else if (t) {
-          if (t._images) {
-            t.update({$addToSet: {_images: doc._id}}).exec();
-          } else {
-            t.update({$set: {_images: [doc._id]}}).exec();
-          }
+        console.log('error finding tag ('+tag+'): ', e);
+      } else if (t) {
+        if (t._images) {
+          t.update({$addToSet: {_images: doc._id}}).exec();
+        } else {
+          t.update({$set: {_images: [doc._id]}}).exec();
         }
+      }
     });
   });
 });
