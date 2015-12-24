@@ -84,6 +84,7 @@ ImageSchema.post('remove', function (doc) {
         if (imageid == id) {
           tag._images.splice(i,1);
         }
+        tag._sort.size = tag._images.length;
         tag.save();
       });
     });
@@ -98,9 +99,9 @@ ImageSchema.post('save', function (doc) {
         console.log('error finding tag ('+tag+'): ', e);
       } else if (t) {
         if (t._images) {
-          t.update({$addToSet: {_images: doc._id}}).exec();
+          t.update({$addToSet: {_images: doc._id}, $set: {'_sort.size': t._images.length+1}}).exec();
         } else {
-          t.update({$set: {_images: [doc._id]}}).exec();
+          t.update({$set: {_images: [doc._id], '_sort.size': t._images.length+1}}).exec();
         }
       }
     });
