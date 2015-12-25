@@ -5,7 +5,10 @@ var mongoose = require('mongoose'),
 var ObjectId = Schema.Types.ObjectId
 
 var TagSchema = new Schema({
-  text: String,
+  text: {
+    type: String,
+    unique: true
+  },
   namespace: String,
   _images: [{
     type: ObjectId,
