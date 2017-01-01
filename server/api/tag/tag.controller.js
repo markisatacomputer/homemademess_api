@@ -14,10 +14,29 @@ var Tag = require('./tag.model');
 
 // Get list of tags
 exports.index = function(req, res) {
-  Tag.find(function (err, tags) {
-    if(err) { return handleError(res, err); }
-    return res.json(200, tags);
-  });
+  var conditions, tags;
+
+  if (req.query) {
+    //  construct tags query condition
+    if (req.query.hasOwnProperty('text')) {
+
+      //  make sure we're working with an array
+      tags = req.query.text.replace(/_/g, ' ').split('~~');
+      console.log(tags);
+      conditions = { text: { $in: tags } };
+    }
+  }
+  if (conditions !== null) {
+    Tag.find(conditions, function (err, tags) {
+      if(err) { return handleError(res, err); }
+      return res.json(200, tags);
+    });
+  } else {
+    Tag.find(function (err, tags) {
+      if(err) { return handleError(res, err); }
+      return res.json(200, tags);
+    });
+  }
 };
 
 // Get a single tag
