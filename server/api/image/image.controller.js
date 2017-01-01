@@ -46,6 +46,7 @@ exports.index = function(req, res) {
       images[i].tags = _.map(image.tags, function(tag){
         return tag.text.replace(' ', '_');
       });
+      images[i].n = i;
     });
     return res.json(200, {images: images, tags: allTags });
   });
