@@ -18,7 +18,7 @@
     "jsonwebtoken": "^0.3.0",
     "lodash": "~3.9.3",
     "method-override": "~1.0.0",
-    "mongoose": "^4.0.8",
+    "mongoose": "^4.7.5",
     "morgan": "~1.0.0",
     "multer": "^0.1.8",
     "node-schedule": "^0.2.9",
