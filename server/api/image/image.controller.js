@@ -11,13 +11,14 @@
 
 var _ = require('lodash');
 var Image = require('./image.model');
+var Tag = require('../tag/tag.model');
 var aws = require('aws-sdk');
 var Q = require('q');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
 
 // Get list of all images
 exports.index = function(req, res) {
-  var projection, conditions, allTags, pagination, countP, resultP;
+  var projection, conditions, allTags, pagination, countP, resultP, resolveC;
   //  don't include exif - please it's just too much
   projection = {
     exif: 0
@@ -29,62 +30,94 @@ exports.index = function(req, res) {
     page: 0,
     per: 60
   }
+  //  we must resolve conditions in order to provide a text tag query param
+  resolveC = Q.defer();
   //  if there is a query, let's parse it
   if (req.query) {
     //  tag params
+
+    //  pagination params
+    if (req.query.hasOwnProperty('page')) {
+      pagination.page = Number(req.query.page);
+    }
+    if (req.query.hasOwnProperty('per')) {
+      pagination.per = Number(req.query.per);
+    }
+    //  tag id param - takes precedence over tagtext bc it doesn't involve an extra query
     if (req.query.hasOwnProperty('tags')) {
       if (!Array.isArray(req.query.tags)) {
         req.query.tags = [req.query.tags];
       }
       conditions.tags = { $in: req.query.tags };
     }
-    //  pagination params
-    if (req.query.hasOwnProperty('page')) {
-      pagination.page = req.query.page;
-    }
-    if (req.query.hasOwnProperty('per')) {
-      pagination.per = req.query.per;
+    //  tag Text param
+    if (req.query.hasOwnProperty('tagtext') && !conditions.hasOwnProperty('tags')) {
+      var tags = req.query.tagtext.replace(/_/g, ' ').split('~~'),
+      tagConditions = { text: { $in: tags } };
+      Tag.find(tagConditions, function (err, tags) {
+        if(err) {
+          console.log(err);
+          resolveC.reject(err);
+        }
+        var tagIds = [];
+        _.each(tags, function(t){
+          tagIds.push(t._id);
+        });
+        conditions.tags = { $in: tagIds };
+        resolveC.resolve(conditions);
+      });
+    } else {
+      resolveC.resolve(conditions);
     }
   }
 
-  //  count
-  countP = Q.defer();
-  Image.find(conditions, projection).count(function(err, count){
-    if(err) {  countP.reject(err); }
-    countP.resolve(count);
-  });
-  //  image query
-  resultP = Q.defer();
-  Image.find(conditions, projection).sort({createDate: 'desc'})
-  .populate('tags', 'text')
-  .lean()
-  .limit(pagination.per)
-  .skip(pagination.per*pagination.page)
-  .exec( function (err, images) {
-    if(err) {  resultP.reject(err); }
-    // transform tags
-    allTags = [];
-    _.each(images, function(image, i){
-      // collect all tags in one array
-      allTags = _.union(allTags, image.tags);
-      // transform tags to simple array
-      images[i].tags = _.map(image.tags, function(tag){
-        return tag.text.replace(' ', '_');
+  //  we have all our conditions - put together the query
+  resolveC.promise.then(
+    function(cond) {
+      //  count
+      countP = Q.defer();
+      Image.find(cond, projection).count(function(err, count){
+        if(err) {  countP.reject(err); }
+        countP.resolve(count);
       });
-      images[i].n = i;
-    });
-    resultP.resolve({images: images, tags: allTags });
-  });
-  Q.all([countP.promise, resultP.promise]).then(function(both){
-    var merged;
-    merged = both[1];
-    merged.pagination = pagination;
-    merged.pagination.count = both[0];
-    return res.json(200, merged);
-  },
-  function(err){
-    return res.json(500, err);
-  });
+      //  image query
+      resultP = Q.defer();
+      Image.find(cond, projection).sort({createDate: 'desc'})
+      .populate('tags', 'text')
+      .lean()
+      .limit(pagination.per)
+      .skip(pagination.per*pagination.page)
+      .exec( function (err, images) {
+        if(err) {  resultP.reject(err); }
+        // transform tags
+        allTags = [];
+        _.each(images, function(image, i){
+          // collect all tags in one array
+          allTags = _.union(allTags, image.tags);
+          // transform tags to simple array
+          images[i].tags = _.map(image.tags, function(tag){
+            return tag.text.replace(' ', '_');
+          });
+          images[i].n = i;
+        });
+        resultP.resolve({images: images, tags: allTags });
+      });
+      Q.all([countP.promise, resultP.promise]).then(function(both){
+        var merged;
+        merged = both[1];
+        merged.pagination = pagination;
+        merged.pagination.count = both[0];
+        return res.json(200, merged);
+      },
+      function(err){
+        return res.json(500, err);
+      });
+    },
+    function(err) {
+      return res.json(500, err);
+    }
+  );
+
 };
 
 // Get a single image

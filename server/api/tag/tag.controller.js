@@ -22,7 +22,6 @@ exports.index = function(req, res) {
 
       //  make sure we're working with an array
       tags = req.query.text.replace(/_/g, ' ').split('~~');
-      console.log(tags);
       conditions = { text: { $in: tags } };
     }
   }
