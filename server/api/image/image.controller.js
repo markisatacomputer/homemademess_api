@@ -12,11 +12,12 @@
 var _ = require('lodash');
 var Image = require('./image.model');
 var aws = require('aws-sdk');
+var Q = require('q');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
 
 // Get list of all images
 exports.index = function(req, res) {
-  var projection, conditions, allTags;
+  var projection, conditions, allTags, pagination, countP, resultP;
   //  don't include exif - please it's just too much
   projection = {
     exif: 0
@@ -24,19 +25,43 @@ exports.index = function(req, res) {
   conditions = {
     temporary: 0 //  turn off for debug
   }
+  pagination = {
+    page: 0,
+    per: 60
+  }
   //  if there is a query, let's parse it
   if (req.query) {
-    //  construct tags query condition
+    //  tag params
     if (req.query.hasOwnProperty('tags')) {
-      //  make sure we're working with an array
       if (!Array.isArray(req.query.tags)) {
         req.query.tags = [req.query.tags];
       }
       conditions.tags = { $in: req.query.tags };
     }
+    //  pagination params
+    if (req.query.hasOwnProperty('page')) {
+      pagination.page = req.query.page;
+    }
+    if (req.query.hasOwnProperty('per')) {
+      pagination.per = req.query.per;
+    }
   }
-  Image.find(conditions, projection).sort({createDate: 'desc'}).populate('tags', 'text').lean().exec( function (err, images) {
-    if(err) { return handleError(res, err); }
+
+  //  count
+  countP = Q.defer();
+  Image.find(conditions, projection).count(function(err, count){
+    if(err) {  countP.reject(err); }
+    countP.resolve(count);
+  });
+  //  image query
+  resultP = Q.defer();
+  Image.find(conditions, projection).sort({createDate: 'desc'})
+  .populate('tags', 'text')
+  .lean()
+  .limit(pagination.per)
+  .skip(pagination.per*pagination.page)
+  .exec( function (err, images) {
+    if(err) {  resultP.reject(err); }
     // transform tags
     allTags = [];
     _.each(images, function(image, i){
@@ -48,7 +73,17 @@ exports.index = function(req, res) {
       });
       images[i].n = i;
     });
-    return res.json(200, {images: images, tags: allTags });
+    resultP.resolve({images: images, tags: allTags });
+  });
+  Q.all([countP.promise, resultP.promise]).then(function(both){
+    var merged;
+    merged = both[1];
+    merged.pagination = pagination;
+    merged.pagination.count = both[0];
+    return res.json(200, merged);
+  },
+  function(err){
+    return res.json(500, err);
   });
 };
 
