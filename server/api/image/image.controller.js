@@ -18,18 +18,28 @@ aws.config.endpoint = process.env.AWS_ENDPOINT;
 
 // Get list of all images
 exports.index = function(req, res) {
-  var projection, conditions, allTags, pagination, countP, resultP, resolveC;
-  //  don't include exif - please it's just too much
-  projection = {
+  var allTags, countP, resultP, resolveC,
+  projection = { //  don't include exif - please it's just too much
     exif: 0
-  }
+  },
   conditions = {
     temporary: 0 //  turn off for debug
-  }
-  pagination = {
-    page: 0,
-    per: 60
-  }
+  },
+  filter = {
+    pagination: {
+      page: 0,
+      per: 60
+    },
+    tag: {
+      tags: [],
+      tagtext: [],
+      operator: 'or'
+    },
+    date: {
+      from: 0,
+      to: 0
+    }
+  };
   //  we must resolve conditions in order to provide a text tag query param
   resolveC = Q.defer();
   //  if there is a query, let's parse it
@@ -38,22 +48,24 @@ exports.index = function(req, res) {
 
     //  pagination params
     if (req.query.hasOwnProperty('page')) {
-      pagination.page = Number(req.query.page);
+      filter.pagination.page = Number(req.query.page);
     }
     if (req.query.hasOwnProperty('per')) {
-      pagination.per = Number(req.query.per);
+      filter.pagination.per = Number(req.query.per);
     }
-    //  tag id param - takes precedence over tagtext bc it doesn't involve an extra query
+    //  tag id param
     if (req.query.hasOwnProperty('tags')) {
       if (!Array.isArray(req.query.tags)) {
         req.query.tags = [req.query.tags];
       }
+      filter.tag.tags = req.query.tags;
       conditions.tags = { $in: req.query.tags };
     }
     //  tag Text param
-    if (req.query.hasOwnProperty('tagtext') && !conditions.hasOwnProperty('tags')) {
+    if (req.query.hasOwnProperty('tagtext')) {
       var tags = req.query.tagtext.replace(/_/g, ' ').split('~~'),
       tagConditions = { text: { $in: tags } };
+      filter.tag.tagtext = tags;
       Tag.find(tagConditions, function (err, tags) {
         if(err) {
           console.log(err);
@@ -85,8 +97,8 @@ exports.index = function(req, res) {
       Image.find(cond, projection).sort({createDate: 'desc'})
       .populate('tags', 'text')
       .lean()
-      .limit(pagination.per)
-      .skip(pagination.per*pagination.page)
+      .limit(filter.pagination.per)
+      .skip(filter.pagination.per*filter.pagination.page)
       .exec( function (err, images) {
         if(err) {  resultP.reject(err); }
         // transform tags
@@ -104,9 +116,9 @@ exports.index = function(req, res) {
       });
       Q.all([countP.promise, resultP.promise]).then(function(both){
         var merged;
-        merged = both[1];
-        merged.pagination = pagination;
-        merged.pagination.count = both[0];
+        merged = both[1];                          // image and tags
+        merged.filter = filter;                    // filter
+        merged.filter.pagination.count = both[0];
         return res.json(200, merged);
       },
       function(err){
