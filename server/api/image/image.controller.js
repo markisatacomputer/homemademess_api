@@ -71,6 +71,7 @@ exports.index = function(req, res) {
           console.log(err);
           resolveC.reject(err);
         }
+        filter.tag.tags = tags;
         var tagIds = [];
         _.each(tags, function(t){
           tagIds.push(t._id);
