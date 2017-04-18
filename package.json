@@ -10,7 +10,6 @@
     "cookie-parser": "~1.0.1",
     "cors": "^2.7.1",
     "errorhandler": "~1.0.0",
-    "exif": "^0.4.0",
     "exiftool": "0.0.3",
     "express": "~4.0.0",
     "express-jwt": "^0.1.3",
