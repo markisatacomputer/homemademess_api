@@ -1,6 +1,6 @@
 {
-  "name": "hmm2",
-  "version": "0.0.0",
+  "name": "hmm_api",
+  "version": "0.0.1",
   "main": "server/app.js",
   "dependencies": {
     "aws-sdk": "^2.1.30",
@@ -33,15 +33,6 @@
     "socketio-jwt": "^2.0.2"
   },
   "devDependencies": {
-    "grunt": "~0.4.4",
-    "grunt-build-control": "DaftMonk/grunt-build-control",
-    "grunt-contrib-coffee": "^0.10.1",
-    "grunt-env": "~0.4.1",
-    "grunt-express-server": "~0.4.17",
-    "grunt-mocha-test": "~0.10.2",
-    "grunt-node-inspector": "~0.1.5",
-    "grunt-nodemon": "~0.2.0",
-    "grunt-open": "~0.2.3",
     "gulp": "^3.9.1",
     "gulp-jshint": "^2.0.4",
     "gulp-nodemon": "^2.2.1",
@@ -50,11 +41,10 @@
     "jshint-stylish": "~0.1.5",
     "open": "~0.0.4",
     "should": "~3.3.1",
-    "supertest": "~0.11.0",
-    "time-grunt": "~0.3.1"
+    "supertest": "~0.11.0"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=4.3.2"
   },
   "scripts": {
     "start": "node server/app.js",
