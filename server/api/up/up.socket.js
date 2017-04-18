@@ -12,10 +12,11 @@ exports.register = function(socket) {
   var onS3Progress = function (id, progress) {
     socket.emit(id+':progress', progress, this.total);
   }
-  var onStackEnd = function(id) {
+  var onStackEnd = function(id, img) {
     //  debug
     console.log(id+':complete');
-    socket.emit(id+':complete');
+    socket.emit(id+':complete', img);
+    socket.emit('image:complete', img);
     Queue.bubble(id).then(function(current){
       console.log('current',current);
       //  if the queue stack is empty, broadcast it
@@ -28,7 +29,7 @@ exports.register = function(socket) {
   Upload.removeAllListeners('S3Progress');
   Upload.removeAllListeners('StackEnd');
   //  Attach listeners
-  Upload.on('S3Progress', onS3Progress); 
+  Upload.on('S3Progress', onS3Progress);
   Upload.on('StackEnd', onStackEnd);
 
   //  Remove from queue and abort on remove from upload preview in client

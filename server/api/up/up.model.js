@@ -15,11 +15,11 @@ var _               = require('lodash');
 
 // Log object upload result
 var logAndResolve = function (err, data, deferred) {
-  if (err) { 
+  if (err) {
     console.log('Error: ', err);
     deferred.reject(err);
   } else {
-    //console.log(data);
+    console.log(data);
     deferred.resolve(data);
   }
 }
@@ -40,12 +40,14 @@ var Upload = function(file, IMG, params) {
     loaded: {},
     total: {}
   };
+},
+logErr = function (err) {
+  console.log(err);
 }
 //  inherit EventEmitter
 util.inherits(Upload, EventEmitter);
 //  Extend Prototype
 Upload.prototype.constructor = Upload;
-
 
 Upload.prototype.send = function() {
   var self = this;
@@ -60,10 +62,10 @@ Upload.prototype.send = function() {
         self.S3 = [];
         self.progress.loaded = {};
         self.progress.total = {};
-        self.emit('StackEnd', self.IMG.id);
-      });
-    });
-  });
+        self.emit('StackEnd', self.IMG.id, self.IMG);
+      }, logErr);
+    }, logErr);
+  }, logErr);
 }
 
 //  Get S3 Connection
@@ -77,7 +79,7 @@ Upload.prototype.getS3 = function(params) {
       Body: fs.createReadStream(this.file)
     }
   }
-  
+
   //  create S3 connection
   var S3 = new aws.S3.ManagedUpload({params: params});
   var percent = 0;
@@ -94,7 +96,7 @@ Upload.prototype.getS3 = function(params) {
       percent = rightnow;
     }
   });
-  
+
   //  add to object store
   this.S3.push(S3);
 
@@ -199,10 +201,12 @@ Upload.prototype.upDerivative = function() {
     var S3 = self.getS3(params);
     //  send
     S3.send( function(err, data) {
-      //  store uri in derivative
-      self.derivative.uri =  data.Location;
-      //  pass on event to server for socket
-      self.emit('S3ThumbUploadEnd', self.IMG.id, data);
+      if (data) {
+        //  store uri in derivative
+        self.derivative.uri =  data.Location;
+        //  pass on event to server for socket
+        self.emit('S3ThumbUploadEnd', self.IMG.id, data);
+      }
       //  log and end our promise
       logAndResolve(err, data, deferred);
     });
@@ -233,7 +237,7 @@ Upload.prototype.createThumbs = function(derivs, def) {
     self.createThumbs(derivatives, deferred);
   } else {
     derivatives = derivs;
-    //  create thumb and add result to object store 
+    //  create thumb and add result to object store
     self.derivative = derivatives.shift();
     self.createThumb(derivative, deferred.reject).then( function() {
       self.derivatives.push(self.derivative);
@@ -311,7 +315,7 @@ Upload.prototype.imageOrient = function () {
       }
     });
   });
-  
+
   return deferred.promise;
 }
 
