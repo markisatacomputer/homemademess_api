@@ -54,10 +54,15 @@ function destroy (id) {
 }
 // Updates an image in the DB.
 function edit (im) {
-  var id = im.id;
+  var id = im.id,
+  options = {
+    new: true
+  };
+
   delete im.id;
+
   // find record
-  image.findByIdAndUpdate(id, im, function (err, i) {
+  image.findByIdAndUpdate(id, im, options, function (err, i) {
     if(err) { console.log (err); }
   });
 }
