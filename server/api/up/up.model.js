@@ -60,7 +60,10 @@ Upload.prototype.send = function() {
           //  cleanup
           self.cleanup(self.file+'-oriented');
           self.cleanup(self.file);
-          self.cleanup(self.original);
+          if (self.original != self.file) {
+            self.cleanup(self.original);
+          }
+
           //  empty S3 store
           self.S3 = [];
           self.progress.loaded = {};
