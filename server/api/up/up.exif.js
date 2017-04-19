@@ -100,25 +100,30 @@ function getExifValue(exif,accepted,transform) {
   // find an exif tag
   var t = null;
   while (!t && accepted.length > 0) {
-    t = _.get(exif,accepted.shift(),'yo');
+    t = _.get(exif,accepted.shift(), 0);
+    if (t) { break; }
   }
-  //  if we found one let's return it in the right format
-  if (t && t != 'yo') {
-    if (transform) {
-      t = transform(t);
-    }
-    return t;
+
+  //  figure out what's wrong with this
+  //console.log(t);
+
+  //  transform even if not found
+  if (transform) {
+    t = transform(t);
   }
-  //  no?  send a big ol 0
-  return 0;
+
+  //  figure out what's wrong with this
+  //console.log(t);
+  return t;
 }
 
 // return a valid date
 function getValidDate(exif) {
   return getExifValue(
     exif,
-    ['DateTimeOriginal','CreateDate'],
-    function(d) {
+    ['CreateDate', 'DateTimeOriginal', 'FileModifyDate'],
+    function (d) {
+      d = d.split('-')[0];
       d = d.split(/[\s:]/);
       if (Array.isArray(d)) {
         return Date.UTC.apply(null, d);
@@ -141,22 +146,32 @@ function getOrientation(exif) {
 }
 
 exports.extract = function (path, IMG) {
+  var deferred = Q.defer();
   // get exif metadata
-  getExif(path).then(function (exif){
+  getExif(path).then( function (exif) {
+
     // set orientation
     IMG.orientation = getOrientation(exif);
     // set create date if existing
     IMG.createDate = getValidDate(exif);
+    // set fileType
+    IMG.fileType = getType(exif);
+
     // now process the individual exif metadata tags
     saveExifTags(exif).then(function (exifrefs) {
+
       // attach exif to image record
       IMG.exif = exifrefs;
-      // save the image to db
-      IMG.save(function (err) {
+
+      // save the image to db and resolve
+      IMG.save(function (err, doc) {
         if (err) {
-          console.log(err);
+          deferred.reject(err);
         }
+        deferred.resolve(doc);
       });
     });
-  }, function(e) { console.log(e); });
+  }, function(e) { logErr(e, deferred); });
+
+  return deferred.promise;
 }

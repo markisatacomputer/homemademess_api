@@ -12,6 +12,10 @@ var exif   = require('./up.exif');
  *    4. Pipe to derivatives, push to cdn bucket, update db w uri
  *    5. Return Image record for app api use
  */
+function logErr (err, res) {
+  console.log(err);
+  return res.json(500, err);
+}
 exports.index = function(req, res) {
   var file = req.files.file;
   // create new image
@@ -20,17 +24,14 @@ exports.index = function(req, res) {
   i.filename = file.originalname;
   // temporary - let's make it an hour limit
   i.temporary = Date.now() + 3600000;
-  // save the image to db
-  i.save(function (err) {
-    if (err) {
-      console.log(err);
-      return res.json(200, err);
-    }
-    //  add file to upload queue
-    Queue.add(file.path, i.id);
-    //  Get the exif and save
-    exif.extract(file.path, i);
-    // pass back our image db record
-    return res.json(200, i);
-  });
+  //  get exif and save
+  exif.extract(file.path, i).then(
+    function (doc) {
+      //  add file to upload queue
+      Queue.add(file.path, i.id);
+      //  respond to request
+      return res.json(200, doc);
+    },
+    function (err) { return logErr(err, res); }
+  );
 };

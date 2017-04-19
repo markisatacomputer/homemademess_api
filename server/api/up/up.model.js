@@ -26,7 +26,7 @@ var logAndResolve = function (err, data, deferred) {
 
 var Upload = function(file, IMG, params) {
   EventEmitter.call(this);
-  this.file = typeof file!== 'undefined' ? file : 0;
+  this.original = this.file = typeof file!== 'undefined' ? file : 0;
   this.IMG = typeof IMG !== 'undefined' ?  IMG : {id: 0};
   this.derivative = {};
   this.derivatives = [];
@@ -51,18 +51,22 @@ Upload.prototype.constructor = Upload;
 
 Upload.prototype.send = function() {
   var self = this;
-  self.imageOrient().then(function(){
-    self.createThumbs().then(function(){
-      var originalPromise = self.upOriginal();
-      var derivativesPromise = self.upAllDerivatives();
-      Q.all([originalPromise, derivativesPromise]).then( function() {
-        //  cleanup oriented file
-        self.cleanup(self.file+'-oriented');
-        //  empty S3 store
-        self.S3 = [];
-        self.progress.loaded = {};
-        self.progress.total = {};
-        self.emit('StackEnd', self.IMG.id, self.IMG);
+  self.convertOriginal().then(function(){
+    self.imageOrient().then(function(){
+      self.createThumbs().then(function(){
+        var originalPromise = self.upOriginal();
+        var derivativesPromise = self.upAllDerivatives();
+        Q.all([originalPromise, derivativesPromise]).then( function() {
+          //  cleanup
+          self.cleanup(self.file+'-oriented');
+          self.cleanup(self.file);
+          self.cleanup(self.original);
+          //  empty S3 store
+          self.S3 = [];
+          self.progress.loaded = {};
+          self.progress.total = {};
+          self.emit('StackEnd', self.IMG.id, self.IMG);
+        }, logErr);
       }, logErr);
     }, logErr);
   }, logErr);
@@ -128,8 +132,6 @@ Upload.prototype.upOriginal = function() {
       self.emit('S3UploadEnd', self.IMG.id, data);
       //  log and end our promise
       logAndResolve(err, data, deferred);
-      //  cleanup
-      self.cleanup(self.file);
     });
   } else {
     console.error('Upload.upOriginal called without setting file or IMG.');
@@ -288,10 +290,33 @@ Upload.prototype.createThumb = function (derivative) {
   return deferred.promise;
 }
 
+Upload.prototype.convertOriginal = function () {
+  var self = this,
+  deferred = Q.defer();
+
+  //  make sure this is stored...
+  self.original = self.file;
+
+  if (typeof self.IMG.fileType != 'undefined' && self.IMG.fileType == 'JPEG') {
+    //  if it's a JPEG, we're done
+    deferred.resolve(self.original);
+  } else {
+    //  convert the file to JPEG
+    self.file = self.file.split('.')[1] + '.jpg';
+    gm(self.original).write(self.file, function(err) {
+      if (err) { deferred.reject(err); }
+      deferred.resolve(self.file);
+    });
+  }
+
+  return deferred.promise;
+}
+
 Upload.prototype.imageOrient = function () {
   var self = this;
   var deferred = Q.defer();
   var path = self.file+'-oriented';
+
   // write oriented image
   gm(self.file).autoOrient().write(path, function(err) {
     // log errors
