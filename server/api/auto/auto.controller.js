@@ -4,11 +4,16 @@ var _ = require('lodash');
 var Tag = require('../tag/tag.model');
 
 exports.autocomplete = function(req, res) {
-  var q = _.values(req.query);
-  var re = new RegExp(q.join(''), "gi");
-  Tag.find({text: {$regex: re}, '_sort.size': {$gt: 0}}, 
-    null, 
-    { sort: { '_sort.size': -1, '_sort.naturalized' : 1 }, limit: 10 }, 
+  var q = req.query.q,
+  s = req.query.s,
+  re = new RegExp(q, "gi"),
+  search = {text: {$regex: re}};
+  if (typeof s !== 'undefined') {
+    search['_sort.size'] = {$gt: s}
+  }
+  Tag.find(search,
+    null,
+    { sort: { '_sort.size': -1, '_sort.naturalized' : 1 }, limit: 10 },
     function (err, tags){
       if(err) { return res.json({status: 500}); }
       if(!tags) { return res.json({status:404}); }
