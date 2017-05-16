@@ -102,9 +102,12 @@ exports.index = function(req, res) {
       .skip(filter.pagination.per*filter.pagination.page)
       .exec( function (err, images) {
         if(err) {  resultP.reject(err); }
-        // transform tags
+
+        // transform images as needed
         allTags = [];
         _.each(images, function(image, i){
+          var selected;
+
           // collect all tags in one array
           allTags = _.union(allTags, image.tags);
           // transform tags to simple array
@@ -112,14 +115,24 @@ exports.index = function(req, res) {
             return tag.text.replace(' ', '_');
           });
           images[i].n = i;
+
+          //  only include selected for admin users
+          selected = false;
+          if (typeof image.selected !== 'undefined') {
+            if (_.find(image.selected, req.user._id)) {
+              selected = true
+            }
+          }
+          images[i].selected = selected
+
         });
         resultP.resolve({images: images, tags: allTags });
       });
-      Q.all([countP.promise, resultP.promise]).then(function(both){
+      Q.all([countP.promise, resultP.promise]).then(function(allP){
         var merged;
-        merged = both[1];                          // image and tags
+        merged = allP[1];                          // image and tags
         merged.filter = filter;                    // filter
-        merged.filter.pagination.count = both[0];
+        merged.filter.pagination.count = allP[0];
         return res.json(200, merged);
       },
       function(err){

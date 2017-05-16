@@ -43,7 +43,11 @@ var ImageSchema = new Schema({
   temporary: {
     type: Number,
     default: Date.now()
-  }
+  },
+  selected: [{
+    type: ObjectId,
+    ref: 'User'
+  }]
 });
 
 ImageSchema.post('remove', function (doc) {

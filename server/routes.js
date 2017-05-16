@@ -16,6 +16,7 @@ module.exports = function(app) {
   app.use('/things', require('./api/thing'));
   app.use('/users', require('./api/user'));
   app.use('/up', require('./api/up'));
+  app.use('/select', require('./api/selected'));
 
   //  Auth
   app.use('/auth', require('./auth'));
