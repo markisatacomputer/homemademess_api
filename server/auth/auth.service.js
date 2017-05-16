@@ -21,17 +21,28 @@ function isAuthenticated(required) {
       if(req.query && req.query.hasOwnProperty('access_token')) {
         req.headers.authorization = 'Bearer ' + req.query.access_token;
       }
-      validateJwt(req, res, next);
+      //  if not required, and no header, skip authorization
+      if ((req.headers.authorization.length == 0 || typeof req.headers.authorization == 'undefined')  && required === false) {
+        next();
+      } else {
+        validateJwt(req, res, next);
+      }
     })
     // Attach user to request
     .use(function(req, res, next) {
-      User.findById(req.user._id, function (err, user) {
-        if (err) return next(err);
-        if (!user && typeof required !== 'undefined' && required === false) return res.send(401);
-
-        req.user = user;
+      //  if not required, and no header, skip authorization
+      if ((req.headers.authorization.length == 0 || typeof req.headers.authorization == 'undefined')  && required === false) {
+        req.user = {role: 'anon'};
         next();
-      });
+      } else {
+        User.findById(req.user._id, function (err, user) {
+          if (err) return next(err);
+          if (!user) return res.send(401);
+
+          req.user = user;
+          next();
+        });
+      }
     });
 }
 
