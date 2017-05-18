@@ -75,10 +75,14 @@ exports.selectOne = function(req, res) {
     });
 };
 
-//  Mark images as UNSELECTED by current logged in user
+//  Mark images as UNSELECTED
 exports.delete = function(req, res) {
+  var conditions = req.conditions;
+  //  selected by current user
+  conditions.selected = { $elemMatch: { $eq: req.user._id } };
+  //  update
   Image.update(
-    { selected: { $elemMatch: { $eq: req.user._id } } },
+    conditions,
     { $pull:
       { selected: req.user._id }
     },

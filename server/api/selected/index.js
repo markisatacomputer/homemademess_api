@@ -11,7 +11,7 @@ var router = express.Router();
 router.get('/', auth.hasRole('admin'), controller.index);
 router.post('/', auth.hasRole('admin'), insert.query(), attach.conditions(), controller.select);
 router.post('/:id', auth.hasRole('admin'), controller.selectOne);
-router.delete('/', auth.hasRole('admin'), controller.delete);
+router.delete('/', auth.hasRole('admin'), insert.query(), attach.conditions(), controller.delete);
 router.delete('/:id', auth.hasRole('admin'), controller.deleteOne);
 router.post('/tags', auth.hasRole('admin'), controller.saveTags);
 router.delete('/tags', auth.hasRole('admin'), controller.deleteTags);
