@@ -20,8 +20,8 @@ exports.register = function(socket) {
         //  add name to args array
         args.unshift(name);
         //  send
-        console.log.apply(this, args);
         socket.emit.apply(socket, args);
+        console.log.apply(this, args);
       });
     }
   });
