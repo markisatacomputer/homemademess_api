@@ -18,16 +18,27 @@ var Image = require('../image/image.model');
 //  Emit custom events for socket to pass on
 exports.emitter = emitter;
 
-// Get all images marked as selected by current logged in user
+//  Get all images marked as selected by current logged in user
 exports.index = function(req, res) {
-  Image.find({ selected: { $elemMatch: { $eq: req.user._id } } }).exec( function (err, selected) {
-    if (err) { return handleError(res, err); }
-    return res.json(200, selected);
-  });
+  //  param to return Image Objects
+  if (req.query.returnImages) {
+    Image.find({ selected: { $elemMatch: { $eq: req.user._id } } }).exec( function (err, selected) {
+      if (err) { return handleError(res, err); }
+      return res.json(200, selected);
+    });
+  //  Default returns only ids
+  } else {
+    Image.find({ selected: { $elemMatch: { $eq: req.user._id } } }, {_id: 1}).lean().exec( function (err, selected) {
+      if (err) { return handleError(res, err); }
+      selected = selected.map(function(doc){
+        return doc._id;
+      });
+      return res.json(200, selected);
+    });
+  }
 };
 
-// TODO - need to pass filter to this in body so that we select based on that
-// Mark images as selected by current logged in user
+//  Mark all images in current view as SELECTED by current logged in user
 exports.select = function(req, res) {
   var conditions = req.conditions;
   Image.update(
@@ -50,7 +61,7 @@ exports.select = function(req, res) {
     });
 };
 
-// Mark images as selected by current logged in user
+// Mark one image as SELECTED by current logged in user
 exports.selectOne = function(req, res) {
   Image.findOneAndUpdate(
     { _id: { $eq: req.params.id } },
@@ -64,7 +75,7 @@ exports.selectOne = function(req, res) {
     });
 };
 
-// Unmark images as selected by current logged in user
+//  Mark images as UNSELECTED by current logged in user
 exports.delete = function(req, res) {
   Image.update(
     { selected: { $elemMatch: { $eq: req.user._id } } },
@@ -79,7 +90,7 @@ exports.delete = function(req, res) {
     });
 };
 
-// Unmark one image as selected by current logged in user
+//  Mark one image as UNSELECTED by current logged in user
 exports.deleteOne = function(req, res) {
   Image.findOneAndUpdate(
     { _id: { $eq: req.params.id } },
@@ -93,7 +104,7 @@ exports.deleteOne = function(req, res) {
     });
 };
 
-// Add tags to images marked as selected by current logged in user
+//  ADD TAGS
 exports.saveTags = function(req, res) {
   Image.update(
     { selected: { $elemMatch: { $eq: req.user._id } } },
@@ -106,7 +117,7 @@ exports.saveTags = function(req, res) {
   });
 };
 
-// Remove tags from images marked as selected by current logged in user
+//  REMOVE TAGS
 exports.deleteTags = function(req, res) {
   Image.update(
     { selected: { $elemMatch: { $eq: req.user._id } } },
