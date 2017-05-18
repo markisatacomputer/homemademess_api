@@ -10,8 +10,13 @@
 'use strict';
 
 var _ = require('lodash');
+var EventEmitter = require('events');
+var emitter = new EventEmitter();
 var Tag = require('../tag/tag.model');
 var Image = require('../image/image.model');
+
+//  Emit custom events for socket to pass on
+exports.emitter = emitter;
 
 // Get all images marked as selected by current logged in user
 exports.index = function(req, res) {
@@ -21,17 +26,42 @@ exports.index = function(req, res) {
   });
 };
 
+// TODO - need to pass filter to this in body so that we select based on that
 // Mark images as selected by current logged in user
 exports.select = function(req, res) {
+  var conditions = req.conditions;
   Image.update(
-    { _id: { $in :req.body } },
+    conditions,
     { $addToSet:
       { selected: req.user._id }
-    }
-  ).exec( function (err, selected) {
-    if(err) { return handleError(res, err); }
-    return res.json(200, selected);
-  });
+    },
+    { multi: true },
+    function (err, selected) {
+      if(err) { return handleError(res, err); }
+      emitter.emit('image.select.all');
+      //  return ids of selected
+      Image.find(conditions,{_id: 1}).lean().exec(function (err, docs) {
+        if(err) { return handleError(res, err); }
+        docs = docs.map(function(doc){
+          return doc._id;
+        });
+        return res.json(200, docs);
+      });
+    });
+};
+
+// Mark images as selected by current logged in user
+exports.selectOne = function(req, res) {
+  Image.findOneAndUpdate(
+    { _id: { $eq: req.params.id } },
+    { $addToSet:
+      { selected: req.user._id }
+    },
+    function (err, selected) {
+      if(err) { return handleError(res, err); }
+      emitter.emit('image.select.on', selected._id);
+      return res.json(200, selected);
+    });
 };
 
 // Unmark images as selected by current logged in user
@@ -40,24 +70,27 @@ exports.delete = function(req, res) {
     { selected: { $elemMatch: { $eq: req.user._id } } },
     { $pull:
       { selected: req.user._id }
-    }
-  ).exec( function (err, selected) {
-    if(err) { return handleError(res, err); }
-    return res.json(200, selected);
-  });
+    },
+    { multi: true },
+    function (err, selected) {
+      if(err) { return handleError(res, err); }
+      emitter.emit('image.select.none');
+      return res.json(200, selected);
+    });
 };
 
 // Unmark one image as selected by current logged in user
 exports.deleteOne = function(req, res) {
-  Image.update(
+  Image.findOneAndUpdate(
     { _id: { $eq: req.params.id } },
     { $pull:
       { selected: req.user._id }
-    }
-  ).exec( function (err, selected) {
-    if(err) { return handleError(res, err); }
-    return res.json(200, selected);
-  });
+    },
+    function (err, selected) {
+      if(err) { return handleError(res, err); }
+      emitter.emit('image.select.off', selected._id);
+      return res.json(200, selected);
+    });
 };
 
 // Add tags to images marked as selected by current logged in user
