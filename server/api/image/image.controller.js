@@ -41,12 +41,12 @@ exports.index = function(req, res) {
 
       //  only include selected for admin users
       selected = false;
-      if (typeof image.selected !== 'undefined') {
+      if (typeof(image.selected) !== 'undefined' && typeof(req.user._id) !== 'undefined') {
         if (_.find(image.selected, req.user._id)) {
-          selected = true
+          selected = true;
         }
       }
-      images[i].selected = selected
+      images[i].selected = selected;
     });
 
     return res.json(200, {
