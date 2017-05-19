@@ -108,6 +108,34 @@ exports.deleteOne = function(req, res) {
     });
 };
 
+//  GET TAGS in selected
+exports.getTags = function(req, res) {
+  Image.find(
+    { selected: { $elemMatch: { $eq: req.user._id } } },
+    { tags: 1 }
+  )
+  .populate('tags')
+  .exec( function (err, selected) {
+    var tags = {
+      ids: [],
+      objects: []
+    };
+
+    if(err) { return handleError(res, err); }
+
+    selected.forEach( function(img, i){
+      img.tags.forEach( function(tag, ii) {
+        if ( tags.ids.indexOf(tag._id) == -1 ){
+          tags.ids.push(tag._id);
+          tags.objects.push(tag);
+        }
+      });
+    });
+
+    return res.json(200, tags);
+  });
+};
+
 //  ADD TAGS
 exports.saveTags = function(req, res) {
   Image.update(

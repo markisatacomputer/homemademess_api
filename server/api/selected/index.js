@@ -13,6 +13,7 @@ router.post('/', auth.hasRole('admin'), insert.query(), attach.conditions(), con
 router.post('/:id', auth.hasRole('admin'), controller.selectOne);
 router.delete('/', auth.hasRole('admin'), insert.query(), attach.conditions(), controller.delete);
 router.delete('/:id', auth.hasRole('admin'), controller.deleteOne);
+router.get('/tags', auth.hasRole('admin'), controller.getTags);
 router.post('/tags', auth.hasRole('admin'), controller.saveTags);
 router.delete('/tags', auth.hasRole('admin'), controller.deleteTags);
 
