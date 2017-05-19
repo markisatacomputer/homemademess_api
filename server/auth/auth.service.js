@@ -22,7 +22,7 @@ function isAuthenticated(required) {
         req.headers.authorization = 'Bearer ' + req.query.access_token;
       }
       //  if not required, and no header, skip authorization
-      if ((req.headers.authorization.length == 0 || typeof req.headers.authorization == 'undefined')  && required === false) {
+      if ( typeof req.headers.authorization === 'undefined'  && required === false) {
         next();
       } else {
         validateJwt(req, res, next);
@@ -31,7 +31,7 @@ function isAuthenticated(required) {
     // Attach user to request
     .use(function(req, res, next) {
       //  if not required, and no header, skip authorization
-      if ((req.headers.authorization.length == 0 || typeof req.headers.authorization == 'undefined')  && required === false) {
+      if (typeof req.headers.authorization === 'undefined'  && required === false) {
         req.user = {role: 'anon'};
         next();
       } else {
