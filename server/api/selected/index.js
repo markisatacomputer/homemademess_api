@@ -15,6 +15,7 @@ router.delete('/', auth.hasRole('admin'), insert.query(), attach.conditions(), c
 router.delete('/:id', auth.hasRole('admin'), controller.deleteOne);
 router.get('/tags', auth.hasRole('admin'), controller.getTags);
 router.post('/tags', auth.hasRole('admin'), controller.saveTags);
-router.delete('/tags', auth.hasRole('admin'), controller.deleteTags);
+router.delete('/tags/:id', auth.hasRole('admin'), controller.deleteTags);
+router.delete('/images', auth.hasRole('admin'), controller.deleteSelectedImages);
 
 module.exports = router;

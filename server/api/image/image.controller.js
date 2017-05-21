@@ -91,24 +91,10 @@ exports.update = function(req, res) {
 
 // Deletes a image from the DB.
 exports.destroy = function(req, res) {
-  Image.findById(req.params.id, function (err, image) {
+  Image.remove({_id: req.params.id}, function (err, image) {
     if(err) { return handleError(res, err); }
     if(!image) { return res.send(404); }
-    image.remove(function(err) {
-      if(err) { return handleError(res, err); }
-      //  remove from s3 bucket
-      var params = {
-        Bucket: process.env.AWS_ORIGINAL_BUCKET,
-        Key: image.id,
-
-      }
-      var s3 = new aws.S3();
-      s3.deleteObject(params, function(err, data){
-        if(err) { return handleError(res, err); }
-        return res.send(204, data);
-      });
-      //return res.send(204);
-    });
+    return res.send(204, image);
   });
 };
 

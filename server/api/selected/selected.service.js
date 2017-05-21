@@ -3,12 +3,11 @@
 var compose = require('composable-middleware');
 
 /**
- * Attaches query conditions to the request
- * Otherwise returns 403
+ * Attaches query conditions in request body to the request query property
+ *
  */
 function attachQuery() {
   return compose()
-    // Attach user to request
     .use(function(req, res, next) {
 
       if (req.body.query) {

@@ -20,22 +20,31 @@ exports.emitter = emitter;
 
 //  Get all images marked as selected by current logged in user
 exports.index = function(req, res) {
+  var query;
+
   //  param to return Image Objects
   if (req.query.returnImages) {
-    Image.find({ selected: { $elemMatch: { $eq: req.user._id } } }).exec( function (err, selected) {
-      if (err) { return handleError(res, err); }
-      return res.json(200, selected);
-    });
+    query = Image.find({ selected: { $elemMatch: { $eq: req.user._id } } });
   //  Default returns only ids
   } else {
-    Image.find({ selected: { $elemMatch: { $eq: req.user._id } } }, {_id: 1}).lean().exec( function (err, selected) {
-      if (err) { return handleError(res, err); }
+    query = Image.find({ selected: { $elemMatch: { $eq: req.user._id } } }, {_id: 1}).lean();
+  }
+
+  //  limit if per query param included
+  if (req.query.per) {
+    query.limit( parseInt(req.query.per, 10) );
+  }
+
+  query.exec( function (err, selected) {
+    if (err) { return handleError(res, err); }
+    //  default return array of ids
+    if (!req.query.returnImages) {
       selected = selected.map(function(doc){
         return doc._id;
       });
-      return res.json(200, selected);
-    });
-  }
+    }
+    return res.json(200, selected);
+  });
 };
 
 //  Mark all images in current view as SELECTED by current logged in user
@@ -62,17 +71,21 @@ exports.select = function(req, res) {
 };
 
 // Mark one image as SELECTED by current logged in user
-exports.selectOne = function(req, res) {
-  Image.findOneAndUpdate(
-    { _id: { $eq: req.params.id } },
-    { $addToSet:
-      { selected: req.user._id }
-    },
-    function (err, selected) {
-      if(err) { return handleError(res, err); }
-      emitter.emit('image.select.on', selected._id);
-      return res.json(200, selected);
-    });
+exports.selectOne = function(req, res, next) {
+  if (req.params.id == 'tags') {
+    next();
+  } else {
+    Image.findOneAndUpdate(
+      { _id: { $eq: req.params.id } },
+      { $addToSet:
+        { selected: req.user._id }
+      },
+      function (err, selected) {
+        if(err) { return handleError(res, err); }
+        emitter.emit('image.select.on', selected._id);
+        return res.json(200, selected);
+      });
+  }
 };
 
 //  Mark images as UNSELECTED
@@ -95,17 +108,21 @@ exports.delete = function(req, res) {
 };
 
 //  Mark one image as UNSELECTED by current logged in user
-exports.deleteOne = function(req, res) {
-  Image.findOneAndUpdate(
-    { _id: { $eq: req.params.id } },
-    { $pull:
-      { selected: req.user._id }
-    },
-    function (err, selected) {
-      if(err) { return handleError(res, err); }
-      emitter.emit('image.select.off', selected._id);
-      return res.json(200, selected);
-    });
+exports.deleteOne = function(req, res, next) {
+  if (req.params.id == 'images') {
+    next();
+  } else {
+    Image.findOneAndUpdate(
+      { _id: { $eq: req.params.id } },
+      { $pull:
+        { selected: req.user._id }
+      },
+      function (err, selected) {
+        if(err) { return handleError(res, err); }
+        emitter.emit('image.select.off', selected._id);
+        return res.json(200, selected);
+      });
+  }
 };
 
 //  GET TAGS in selected
@@ -138,13 +155,16 @@ exports.getTags = function(req, res) {
 
 //  ADD TAGS
 exports.saveTags = function(req, res) {
+  console.log(req.body);
   Image.update(
     { selected: { $elemMatch: { $eq: req.user._id } } },
     { $addToSet:
-      { selected: { $each: req.body } }
-    }
+      { tags: { $each: req.body } }
+    },
+    { multi: true }
   ).exec( function (err, selected) {
     if(err) { return handleError(res, err); }
+    saveSelectedImages(req.user._id);
     return res.json(200, selected);
   });
 };
@@ -153,14 +173,50 @@ exports.saveTags = function(req, res) {
 exports.deleteTags = function(req, res) {
   Image.update(
     { selected: { $elemMatch: { $eq: req.user._id } } },
-    { $addToSet:
-      { selected: { $each: req.body } }
-    }
+    { $pull:
+      { tags: req.params.id }
+    },
+    { multi: true }
   ).exec( function (err, selected) {
     if(err) { return handleError(res, err); }
+    saveSelectedImages(req.user._id);
     return res.json(200, selected);
   });
 };
+
+//  DELETE SELECTED IMAGES
+exports.deleteSelectedImages = function(req, res) {
+  Image.find(
+    { selected: { $elemMatch: { $eq: req.user._id } } },
+    { multi: true }
+  ).exec( function (err, selected) {
+    if(err) { return handleError(res, err); }
+    selected.forEach( function(img, i) {
+      img.remove().then(
+        function (img) {
+          console.log('selected.remove', img._id);
+        },
+        function (err) {
+          return handleError(res, err);
+        }
+      );
+    });
+    return res.json(200, {deleted: selected});
+  });
+};
+
+
+
+//  Save all the docs so the tags get updated - there's probably a better way to do this
+function saveSelectedImages(userid) {
+  Image.find( { selected: { $elemMatch: { $eq: userid } } },
+    function (err, docs) {
+      if(err) { return handleError(res, err); }
+      docs.forEach(function(doc){
+        doc.save();
+      });
+    });
+}
 
 function handleError(res, err) {
   return res.send(500, err);
