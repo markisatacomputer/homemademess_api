@@ -193,9 +193,7 @@ exports.deleteSelectedImages = function(req, res) {
     if(err) { return handleError(res, err); }
     selected.forEach( function(img, i) {
       img.remove().then(
-        function (img) {
-          console.log('selected.remove', img._id);
-        },
+        function (img) { },
         function (err) {
           return handleError(res, err);
         }

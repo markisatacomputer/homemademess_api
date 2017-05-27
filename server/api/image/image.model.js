@@ -6,6 +6,8 @@ aws.config.endpoint = process.env.AWS_ENDPOINT;
 var url = require('url');
 var Queue = require('../up/up.queue');
 var Tag = require('../tag/tag.model');
+var Q = require('q');
+var events = require('../../components/events');
 var mongoose = require('mongoose'),
   Schema = mongoose.Schema,
   ObjectId = Schema.Types.ObjectId;
@@ -51,10 +53,13 @@ var ImageSchema = new Schema({
 });
 
 ImageSchema.post('remove', function (doc) {
-  console.log('remove');
   var ds = doc.derivative;
   var s3 = new aws.S3();
   var id = doc.id;
+  var imgP = Q.defer(), tagP = Q.defer(), derP = Q.defer(), ders =[];
+
+  // first emit the start of this process
+  events.emitter.emit('image.delete.begin', id);
 
   // abort managed upload if necessary - logic in queue object
   Queue.abort(id);
@@ -65,21 +70,31 @@ ImageSchema.post('remove', function (doc) {
     Key: id,
   }
   s3.deleteObject(params, function(err, data){
-    if(err) { console.log('image:remove error', err); } else {
-      console.log('image:removed', id);
+    if(err) {
+      imgP.reject(err);
+    } else {
+      imgP.resolve(data);
     }
   });
+
   //  remove from DERIVATIVES from s3 bucket
   _.forEach(ds, function(d){
+    var p = Q.defer();
+    ders.push(p);
     var path = url.parse(d.uri).pathname.slice(1);
     var params = {
       Bucket: process.env.AWS_THUMB_BUCKET,
       Key: path,
     }
     s3.deleteObject(params, function(err, data){
-      if(err) { console.log('image:remove error', err, path); }
-      console.log('image:remove derivative', path);
+      if(err) { p.reject(err); } else { p.resolve(data); }
     });
+  });
+  Q.allSettled(ders).then(function(r){
+    derP.resolve(r);
+  },
+  function(e){
+    derP.reject(e);
   });
 
   // remove image refs from tags
@@ -90,9 +105,22 @@ ImageSchema.post('remove', function (doc) {
           tag._images.splice(i,1);
         }
         tag._sort.size = tag._images.length;
-        tag.save();
+        tag.save().then(function(r){
+          tagP.resolve(r);
+        },
+        function(e){
+          tagP.reject(e);
+        });
       });
     });
+  });
+
+  //  Wait for all our promises to be complete and then we know if delete was a success
+  Q.allSettled([imgP, tagP, derP]).then( function(r){
+    events.emitter.emit('image.delete.complete', id);
+  },
+  function (err) {
+    events.emitter.emit('image.delete.error', err)
   });
 });
 
