@@ -91,10 +91,18 @@ exports.update = function(req, res) {
 
 // Deletes a image from the DB.
 exports.destroy = function(req, res) {
-  Image.remove({_id: req.params.id}, function (err, image) {
+  Image.findById(req.params.id, function (err, image) {
     if(err) { return handleError(res, err); }
     if(!image) { return res.send(404); }
-    return res.send(204, image);
+    //  Find THEN remove so that post remove is called
+    image.remove().then(
+      function (img) {
+        return res.send(204, image);
+      },
+      function (err) {
+        return handleError(res, err);
+      }
+    );
   });
 };
 
