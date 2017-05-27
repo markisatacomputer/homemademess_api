@@ -6,22 +6,32 @@
 
 var Upload = require('./up.model');
 var Queue  = require('./up.queue');
+var image = require('../image/image.model');
 var _      = require('lodash');
 
 exports.register = function(socket) {
+
   var onS3Progress = function (id, progress) {
     socket.emit(id+':progress', progress, this.total);
   }
+
   var onStackEnd = function(id, img) {
-    //  debug
-    console.log(id+':complete');
-    socket.emit(id+':complete', img);
-    socket.emit('image:complete', img);
+    //  emit complete
+    socket.emit('image:upload:complete', id);
+    //  save and then emit
+    image.update({_id: id}, {temporary: 0}, function (err, i) {
+      if(err) {
+        console.log (err);
+      } else {
+        //  somehow add contextual image ids to this
+        socket.emit('image:save', img);
+      }
+    });
+
     Queue.bubble(id).then(function(current){
-      console.log('current',current);
-      //  if the queue stack is empty, broadcast it
+      //  emit when queue is empty
       if (current === 666) {
-        socket.emit('all:complete');
+        socket.emit('image:upload:allcomplete');
       }
     });
   }
@@ -32,13 +42,4 @@ exports.register = function(socket) {
   Upload.on('S3Progress', onS3Progress);
   Upload.on('StackEnd', onStackEnd);
 
-  //  Remove from queue and abort on remove from upload preview in client
-  socket.on('image:remove', function(id){
-    destroy(id, Queue);
-  });
-}
-
-// Deletes an image from the Queue.
-function destroy (id, que) {
-  que.abort(id);
 }
