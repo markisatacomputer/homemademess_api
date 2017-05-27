@@ -16,15 +16,12 @@ exports.register = function(socket) {
   }
 
   var onStackEnd = function(id, img) {
-    //  emit complete
-    socket.emit('image:upload:complete', id);
     //  save and then emit
     image.update({_id: id}, {temporary: 0}, function (err, i) {
       if(err) {
         console.log (err);
       } else {
-        //  somehow add contextual image ids to this
-        socket.emit('image:save', img);
+        socket.emit('image:upload:complete', img);
       }
     });
 
