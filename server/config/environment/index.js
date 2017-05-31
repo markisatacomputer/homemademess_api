@@ -24,6 +24,10 @@ var all = {
   // Should we populate the DB with sample data?
   seedDB: process.env.SEED || false,
 
+  // domain aliases?
+  thumbAlias: process.env.THUMB_DOMAIN_ALIAS || false,
+  originalAlias: process.env.ORIGINAL_DOMAIN_ALIAS || false,
+
   // Secret for session, you will want to change this and make it an environment variable
   secrets: {
     session: process.env.SESSION_SECRET
