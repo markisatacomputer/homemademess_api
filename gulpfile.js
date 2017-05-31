@@ -12,10 +12,23 @@ var gulp = require('gulp')
   , localEnv = require('./server/config/local.env.js')
   , _ = require('lodash')
   , env = require('gulp-env')
+  , exec = require('child_process').exec
 
 gulp.task('lint', function () {
   gulp.src('server/**/*.js')
     .pipe(jshint())
+})
+
+gulp.task('seed', function () {
+  env({
+    file: '.env'
+  })
+
+  exec('node server/config/seed.js', function (err, stdout, stderr) {
+    console.log(stdout);
+    console.log(stderr);
+    cb(err);
+  })
 })
 
 gulp.task('develop', function () {
