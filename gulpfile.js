@@ -11,6 +11,7 @@ var gulp = require('gulp')
   , jshint = require('gulp-jshint')
   , localEnv = require('./server/config/local.env.js')
   , _ = require('lodash')
+  , env = require('gulp-env')
 
 gulp.task('lint', function () {
   gulp.src('server/**/*.js')
@@ -18,17 +19,19 @@ gulp.task('lint', function () {
 })
 
 gulp.task('develop', function () {
+  env({
+    file: '.env'
+  })
+
+
   var stream = nodemon({
       script: 'server/app.js'
     , ext: 'js'
     , tasks: ['lint']
     , watch: ['server/']
     , delay: 3
-    , env: _.assign({
-        NODE_ENV: "development",
-        PORT: "8666"
-      },localEnv)
     })
+
 
   stream
     .on('restart', function () {

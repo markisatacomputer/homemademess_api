@@ -22,11 +22,11 @@ var all = {
   port: process.env.PORT || 80,
 
   // Should we populate the DB with sample data?
-  seedDB: false,
+  seedDB: process.env.SEED || false,
 
   // Secret for session, you will want to change this and make it an environment variable
   secrets: {
-    session: 'hmm2-secret'
+    session: process.env.SESSION_SECRET
   },
 
   // List of user roles
