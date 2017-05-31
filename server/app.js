@@ -42,14 +42,14 @@ require('./routes')(app);
 
 // Start server
 var httpPort = process.env.HTTP_PORT || 80;
-var httpHost = process.env.HOST || 'localhost';
+var httpHost = process.env.IP || 'localhost';
 httpServer.listen(httpPort, httpHost, function () {
   console.log('Express server listening on %d, in %s mode', httpPort, app.get('env'));
   // Schedule cleanup
   require('./components/schedule');
 });
 var httpsPort = process.env.HTTPS_PORT || 443;
-var httpsHost = process.env.HOST || 'localhost';
+var httpsHost = process.env.IP || 'localhost';
 httpsServer.listen(httpsPort, httpsHost, function () {
   console.log('Express server listening on %d, in %s mode', httpsPort, app.get('env'));
 });
