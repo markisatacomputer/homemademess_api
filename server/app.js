@@ -29,6 +29,11 @@ var httpServer = http.createServer(app);
 var httpsServer = https.createServer(credentials, app);
 
 var socketio = require('socket.io')(httpsServer, {
+  serveClient: true,
+  path: '/socket.io-client'
+});
+var socketioHttp = require('socket.io')(httpServer, {
+  serveClient: true,
   path: '/socket.io-client'
 });
 require('./config/socketio')(socketio);
