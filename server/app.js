@@ -41,12 +41,16 @@ require('./config/express')(app);
 require('./routes')(app);
 
 // Start server
-httpServer.listen(process.env.HTTP_PORT, process.env.HOST, function () {
+var httpPort = process.env.HTTP_PORT || 80;
+var httpHost = process.env.HOST || 'localhost';
+httpServer.listen(httpPort, httpHost, function () {
   console.log('Express server listening on %d, in %s mode', process.env.HTTP_PORT, app.get('env'));
   // Schedule cleanup
   require('./components/schedule');
 });
-httpsServer.listen(process.env.HTTPS_PORT, process.env.HOST, function () {
+var httpsPort = process.env.HTTPS_PORT || 443;
+var httpsHost = process.env.HOST || 'localhost';
+httpsServer.listen(httpsPort, httpsHost, function () {
   console.log('Express server listening on %d, in %s mode', process.env.HTTPS_PORT, app.get('env'));
 });
 
