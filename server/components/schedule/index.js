@@ -54,12 +54,11 @@ var j = schedule.scheduleJob(rule, function(){
   //  Remove images that are temporary and the countdown has passed
   Image.find({temporary: {$lte: Date.now(), $gt: 0}}, function(err, docs){
     _.forEach(docs, function(doc, key){
-        var id
         doc.remove(function(err){
           if (err) {
             console.log(err);
           }
-          console.log('temporary file removed - '+id);
+          console.log('temporary file removed: '+doc._id);
         });
       });
     if (err) {
