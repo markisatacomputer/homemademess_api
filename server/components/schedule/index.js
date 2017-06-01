@@ -25,31 +25,6 @@ var truncate = function() {
   });
 }
 
-//  DreamObjects is moving
-var transformBase = function() {
-  Image.find({}, function(err, docs){
-    _.forEach(docs, function(doc, key){
-      var oldBase = 'objects.dreamhost.com',
-      newBase = 'objects-us-west-1.dream.io',
-      derivs = doc.derivative;
-
-      _.forEach(derivs, function(deriv, key) {
-        var uri = derivs[key].uri.replace(oldBase, newBase);
-        derivs[key].uri = uri;
-      });
-      console.log(derivs);
-
-      doc.derivative = derivs;
-      doc.save();
-
-    });
-    if (err) {
-      console.log(err);
-    }
-  });
-}
-//transformBase();  //uncomment to update derivative uris
-
 var j = schedule.scheduleJob(rule, function(){
   //  Remove images that are temporary and the countdown has passed
   Image.find({temporary: {$lte: Date.now(), $gt: 0}}, function(err, docs){
