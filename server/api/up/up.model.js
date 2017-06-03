@@ -58,7 +58,7 @@ Upload.prototype.send = function() {
         var derivativesPromise = self.upAllDerivatives();
         Q.all([originalPromise, derivativesPromise]).then( function(done) {
           //  cleanup
-          cleanPromise = [];
+          var cleanPromise = [];
           cleanPromise.push(self.cleanup(self.file+'-oriented'));
           cleanPromise.push(self.cleanup(self.file));
           if (self.original != self.file) {
@@ -169,6 +169,7 @@ Upload.prototype.upAllDerivatives = function(def) {
         self.IMG.derivative.push({
           height: self.derivative.height,
           width: self.derivative.width,
+          name: self.derivative.name,
           uri: self.derivative.uri
         });
         self.IMG.save(function(err){

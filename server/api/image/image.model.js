@@ -31,6 +31,7 @@ var ImageSchema = new Schema({
   original: String,
   derivative:[{
     uri: String,
+    name: String,
     width: Number,
     height: Number
   }],
