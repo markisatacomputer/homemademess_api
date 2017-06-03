@@ -47,6 +47,11 @@ exports.index = function(req, res) {
         }
       }
       images[i].selected = selected;
+
+      //  send aliased derivatives if env var set
+      if (typeof process.env.THUMB_DOMAIN_ALIAS !== 'undefined') {
+        images[i].derivativePath = process.env.THUMB_DOMAIN_ALIAS + '/' + image._id + '/';
+      }
     });
 
     return res.json(200, {
@@ -63,6 +68,7 @@ exports.show = function(req, res) {
   Image.findById(req.params.id, function (err, image) {
     if(err) { return handleError(res, err); }
     if(!image) { return res.send(404); }
+
     return res.json(image);
   });
 };
