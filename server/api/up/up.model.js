@@ -56,19 +56,25 @@ Upload.prototype.send = function() {
       self.createThumbs().then(function(){
         var originalPromise = self.upOriginal();
         var derivativesPromise = self.upAllDerivatives();
-        Q.all([originalPromise, derivativesPromise]).then( function() {
+        Q.all([originalPromise, derivativesPromise]).then( function(done) {
           //  cleanup
-          self.cleanup(self.file+'-oriented');
-          self.cleanup(self.file);
+          cleanPromise = [];
+          cleanPromise.push(self.cleanup(self.file+'-oriented'));
+          cleanPromise.push(self.cleanup(self.file));
           if (self.original != self.file) {
-            self.cleanup(self.original);
+            cleanPromise.push(self.cleanup(self.original));
           }
-
-          //  empty S3 store
-          self.S3 = [];
-          self.progress.loaded = {};
-          self.progress.total = {};
-          self.emit('StackEnd', self.IMG.id, self.IMG);
+          Q.all(cleanPromise).then(function(yes){
+            //  empty S3 store
+            self.S3 = [];
+            self.progress.loaded = {};
+            self.progress.total = {};
+            //  emit
+            self.emit('StackEnd', self.IMG.id, self.IMG);
+          },
+          function(err){
+            self.emit('StackBroken', err);
+          });
         }, logErr);
       }, logErr);
     }, logErr);
@@ -355,7 +361,6 @@ Upload.prototype.cleanup = function(file) {
   fs.unlink(file, function (err) {
     if (err) {
       deferred.reject(err);
-      console.log(err);
     }
     deferred.resolve(true);
   });
