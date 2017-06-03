@@ -19,8 +19,10 @@ exports.register = function(socket) {
     //  save and then emit
     image.update({_id: id}, {temporary: 0}, function (err, i) {
       if(err) {
-        console.log (err);
+        console.log ('image:upload:complete', err);
+        socket.emit('image:upload:complete:error', err);
       } else {
+        console.log('image:upload:complete', img._id);
         socket.emit('image:upload:complete', img);
       }
     });
@@ -38,5 +40,8 @@ exports.register = function(socket) {
   //  Attach listeners
   Upload.on('S3Progress', onS3Progress);
   Upload.on('StackEnd', onStackEnd);
+  Upload.on('StackBroken', function(err){
+    socket.emit('image:upload:complete:error', err);
+  });
 
 }
