@@ -25,18 +25,21 @@ var credentials = {key: privateKey, cert: certificate};
 // Setup server
 var app = express();
 
-var httpServer = http.createServer(app);
-var httpsServer = https.createServer(credentials, app);
 
+var httpsServer = https.createServer(credentials, app);
 var socketio = require('socket.io')(httpsServer, {
   serveClient: true,
   path: '/socket.io-client'
 });
+require('./config/socketio')(socketio);
+
+var httpServer = http.createServer(app);
 var socketioHttp = require('socket.io')(httpServer, {
   serveClient: true,
   path: '/socket.io-client'
 });
-require('./config/socketio')(socketio);
+require('./config/socketio')(socketioHttp);
+
 require('./config/express')(app);
 require('./routes')(app);
 
