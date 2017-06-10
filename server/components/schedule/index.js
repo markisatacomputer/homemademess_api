@@ -1,5 +1,6 @@
 var _               = require('lodash');
 var Image = require('../../api/image/image.model');
+var Q = require('../../api/up/up.queue');
 var schedule = require('node-schedule');
 
 var aws = require('aws-sdk');
@@ -26,20 +27,22 @@ var truncate = function() {
 }
 
 var j = schedule.scheduleJob(rule, function(){
-  //  Remove images that are temporary and the countdown has passed
-  Image.find({temporary: {$lte: Date.now(), $gt: 0}}, function(err, docs){
-    _.forEach(docs, function(doc, key){
-        doc.remove(function(err){
-          if (err) {
-            console.log(err);
-          }
-          console.log('temporary file removed: '+doc._id);
+  if (Q.current == 666) {
+    //  Remove images that are temporary and the countdown has passed
+    Image.find({temporary: {$lte: Date.now(), $gt: 0}}, function(err, docs){
+      _.forEach(docs, function(doc, key){
+          doc.remove(function(err){
+            if (err) {
+              console.log(err);
+            }
+            console.log('temporary file removed: '+doc._id);
+          });
         });
-      });
-    if (err) {
-      console.log(err);
-    }
-  });
+      if (err) {
+        console.log(err);
+      }
+    });
+  }
 
 });
 
