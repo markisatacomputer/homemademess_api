@@ -37,6 +37,7 @@ exports.register = function(socket) {
   //  Remove listeners
   Upload.removeAllListeners('S3Progress');
   Upload.removeAllListeners('StackEnd');
+  Upload.removeAllListeners('StackBroken');
   //  Attach listeners
   Upload.on('S3Progress', onS3Progress);
   Upload.on('StackEnd', onStackEnd);
