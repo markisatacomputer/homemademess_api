@@ -69,7 +69,7 @@ Queue.prototype.sendCurrent = function () {
 Queue.prototype.bubble = function (id) {
   var self = this;
   var deferred = Q.defer();
-  
+
   //  make sure nothing funny is going on
   if (self.current === id) {
     //  first clean files obj
@@ -84,6 +84,7 @@ Queue.prototype.bubble = function (id) {
     //  if stack is empty, reset current indicator
     } else  {
       self.current = 666;
+      self.up.emit('QueueDone');
     }
     deferred.resolve(self.current);
   } else {

@@ -51,6 +51,7 @@ Upload.prototype.constructor = Upload;
 
 Upload.prototype.send = function() {
   var self = this;
+  self.emit('StackBegin', self.IMG.id, self.IMG);
   self.convertOriginal().then(function(){
     self.imageOrient().then(function(){
       self.createThumbs().then(function(){

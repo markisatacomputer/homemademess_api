@@ -12,7 +12,12 @@ var _      = require('lodash');
 exports.register = function(socket) {
 
   var onS3Progress = function (id, progress) {
-    socket.emit(id+':progress', progress, this.total);
+    socket.emit('image:upload:progress', id, progress, this.total);
+  }
+
+  var onStackBegin = function(id, img) {
+    console.log('image:upload:begin', img._id);
+    socket.emit('image:upload:begin', img);
   }
 
   var onStackEnd = function(id, img) {
@@ -34,15 +39,24 @@ exports.register = function(socket) {
       }
     });
   }
+
+  var onQueueDone = function() {
+    console.log('upload:queue:complete');
+    socket.emit('upload:queue:complete');
+  }
   //  Remove listeners
   Upload.removeAllListeners('S3Progress');
+  Upload.removeAllListeners('StackBegin');
   Upload.removeAllListeners('StackEnd');
   Upload.removeAllListeners('StackBroken');
+  Upload.removeAllListeners('QueueDone');
   //  Attach listeners
   Upload.on('S3Progress', onS3Progress);
+  Upload.on('StackBegin', onStackBegin);
   Upload.on('StackEnd', onStackEnd);
   Upload.on('StackBroken', function(err){
     socket.emit('image:upload:complete:error', err);
   });
+  Upload.on('QueueDone', onQueueDone);
 
 }
