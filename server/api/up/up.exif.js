@@ -5,6 +5,7 @@ var Exif = require('../exif/exif.model');
 var exiftool = require('node-exiftool');
 var ep = new exiftool.ExiftoolProcess();
 var Q = require('q');
+var moment = require('moment');
 
 function logErr (err, deferred) {
   if (err) {
@@ -121,13 +122,15 @@ function getExifValue(exif,accepted,transform) {
 function getValidDate(exif) {
   return getExifValue(
     exif,
-    ['CreateDate', 'DateTimeOriginal', 'FileModifyDate'],
+    ['CreateDate','DateCreated',  'DateTimeOriginal', 'DateTimeCreated', 'ModifyDate', 'FileModifyDate', 'Date'],
     function (d) {
-      d = d.split('-')[0];
-      d = d.split(/[\s:]/);
-      if (Array.isArray(d)) {
-        return Date.UTC.apply(null, d);
+      var dateFormats, newd;
+      dateFormats = ['YYYY:MM:DD hh:mm:ss', moment.ISO_8601]
+      newd = moment(d, dateFormats).valueOf();
+      if (newd !== undefined && newd !== null) {
+        return newd;
       }
+      return d;
     }
   );
 }
