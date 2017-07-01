@@ -3,40 +3,27 @@ homemademess
 
 An image management tool for me.
 
-TODO
----------------------
-
-+  click-drag select
-+  enable edit created date
-+  import exif (client side?)
-
-+  cleanup unsaved (aka image.temporary < Date.now ) from S3 
-  +  cron?
-  +  ~ jenkins?
-+  Move editor into its own scope for reuse (in view)
-+  model for derivative transformations
-+  think about toning down(/gutting) dropzone styles
-+  remove user admin & register
-+  remove tags from editor when all uploads removed
-
-
-Notes for the future
+To Do
 ---------------------
 
 
-+  continue unfinished upload?
-+  save upload state on navigation?
-+  view - all current tags
-+  view - edit/delete images via socket
-+  view - hide/expand top nav button
-+  search - date range/exif
-+  view - details including cdn urls
-+  view - original dl for logged in user
-+  view - download all
-
-
-+  single socket channel per user
-+  galleries - customizable
-+  image manipulation?  watermarking?
++  view filters
+    + date range
+    + exif
+    + selected
++  view additions
+    +  image details including cdn urls
++  refactor upload api endpoint to stream original to s3
++  downloads
+    +  single
+    +  all in view
+    +  all
 +  sharing
+    +  cross post on social media
++  single socket channel per user
++  customizable theming
+    +  image stream
+    +  galleries
++  image manipulation?  watermarking?
+
 
