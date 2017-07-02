@@ -29,7 +29,9 @@ function attachFilters() {
         date: {
           from: 0,
           to: 0
-        }
+        },
+        selected: false,
+        exif: {}
       };
 
       //  we must resolve conditions in order to provide a text tag query param
@@ -37,8 +39,6 @@ function attachFilters() {
 
       //  if there is a query, let's parse it
       if (req.query) {
-        //  tag params
-
         //  pagination params
         if (req.query.hasOwnProperty('page')) {
           filter.pagination.page = Number(req.query.page);
@@ -46,6 +46,18 @@ function attachFilters() {
         if (req.query.hasOwnProperty('per')) {
           filter.pagination.per = Number(req.query.per);
         }
+        //  selected only
+        if (req.query.hasOwnProperty('selected')) {
+          filter.selected = true;
+        }
+        //  date params
+        if (req.query.hasOwnProperty('start')) {
+          filter.date.from = Number(req.query.start);
+        }
+        if (req.query.hasOwnProperty('end')) {
+          filter.date.to = Number(req.query.end);
+        }
+        //  --  TAGS --
         //  tag id param
         if (req.query.hasOwnProperty('tags')) {
           if (!Array.isArray(req.query.tags)) {
@@ -93,6 +105,7 @@ function attachConditions() {
 
       //  if there is a query, let's parse it
       if (req.hasOwnProperty('filter')) {
+        //  --  TAGS --
         if (req.filter.hasOwnProperty('tag')) {
           if (req.filter.tag.hasOwnProperty('tags')) {
             tagIds = req.filter.tag.tags.map( function(t){
@@ -101,6 +114,22 @@ function attachConditions() {
             if (tagIds.length > 0) {
               conditions.tags = { $in: tagIds };
             }
+          }
+        }
+        //  --  SELECTED --
+        if (req.filter.selected && typeof(req.user._id) !== 'undefined') {
+          conditions.selected = { $eq: req.user._id }
+        }
+        //  --  DATE CONSTRAINTS --
+        //        must be unix micro
+        if (req.filter.date.hasOwnProperty('from') && req.filter.date.from !== 0 && Number.isInteger(req.filter.date.from)) {
+          conditions.createDate = { $gte: req.filter.date.from }
+        }
+        if (req.filter.date.hasOwnProperty('to') && req.filter.date.to !== 0 && Number.isInteger(req.filter.date.to)) {
+          if (conditions.hasOwnProperty('createDate')) {
+            conditions.createDate.$lte = req.filter.date.to;
+          } else {
+            conditions.createDate = { $lte: req.filter.date.to }
           }
         }
       }
@@ -121,7 +150,7 @@ function attachCount() {
     .use(function(req, res, next) {
 
       Image.find(req.conditions).count(function(err, count){
-        if(err) {  return res.json(500, error); }
+        if(err) {  return res.json(500, err); }
         req.filter.pagination.count = count;
         next();
       });
