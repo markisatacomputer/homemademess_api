@@ -14,7 +14,6 @@ var errorHandler = require('errorhandler');
 var path = require('path');
 var config = require('./environment');
 var passport = require('passport');
-var multer = require('multer');
 var cors = require('cors');
 
 module.exports = function(app) {
@@ -26,7 +25,6 @@ module.exports = function(app) {
   app.use(methodOverride());
   app.use(cookieParser());
   app.use(passport.initialize());
-  app.use(multer({dest: process.env.UPLOAD_PATH}));
   app.use(cors());
   if ('production' === env) {
     app.use(morgan('dev'));

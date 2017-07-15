@@ -51,13 +51,12 @@ Upload.prototype.constructor = Upload;
 
 Upload.prototype.send = function() {
   var self = this;
-  self.emit('StackBegin', self.IMG.id, self.IMG);
+  //self.emit('StackBegin', self.IMG.id, self.IMG);
   self.convertOriginal().then(function(){
     self.imageOrient().then(function(){
       self.createThumbs().then(function(){
-        var originalPromise = self.upOriginal();
         var derivativesPromise = self.upAllDerivatives();
-        Q.all([originalPromise, derivativesPromise]).then( function(done) {
+        Q.all([derivativesPromise]).then( function(done) {
           //  cleanup
           var cleanPromise = [];
           cleanPromise.push(self.cleanup(self.file+'-oriented'));

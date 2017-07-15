@@ -7,6 +7,4 @@ module.exports = {
   mongo: {
     uri: process.env.MONGO || 'mongodb://localhost/hmm-dev'
   },
-
-  seedDB: true
 };
