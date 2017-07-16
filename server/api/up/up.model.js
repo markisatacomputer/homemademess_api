@@ -7,12 +7,12 @@
 var fs              = require('fs');
 var aws             = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
-var EventEmitter    = require('events').EventEmitter;
 var util            = require("util");
 var gm              = require('gm');
 var Q               = require('q');
 var _               = require('lodash');
 var exif            = require('./up.exif');
+var events          = require('../../components/events');
 
 // Log object upload result
 var logAndResolve = function (err, data, deferred) {
@@ -26,7 +26,6 @@ var logAndResolve = function (err, data, deferred) {
 }
 
 var Upload = function(file, IMG, params) {
-  EventEmitter.call(this);
   this.original = this.file = typeof file!== 'undefined' ? file : 0;
   this.IMG = typeof IMG !== 'undefined' ?  IMG : {id: 0};
   this.derivative = {};
@@ -43,13 +42,9 @@ logErr = function (err) {
   console.log(err);
 }
 
-//  inherit EventEmitter
-util.inherits(Upload, EventEmitter);
 
 //  Extend Prototype
 Upload.prototype.constructor = Upload;
-
-
 
 //  Get S3 Connection
 Upload.prototype.getS3 = function(params) {
@@ -97,10 +92,10 @@ Upload.prototype.updateProgress = function (progress, S3) {
   if ((rightnow - previous) > acceptableProgress) {
     switch(bucket){
       case process.env.AWS_ORIGINAL_BUCKET:
-        this.emit('image.upload.original.progress', key, total);
+        events.emitter.emit('image.upload.original.progress', key, total);
         break;
       case process.env.AWS_THUMB_BUCKET:
-        this.emit('image.upload.derivatives.progress', key, total);
+        events.emitter.emit('image.upload.derivatives.progress', key, total);
         break;
     }
   }

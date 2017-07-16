@@ -21,21 +21,17 @@
 'use strict';
 
 var Q             = require('q');
-var EventEmitter  = require('events').EventEmitter;
 var util          = require("util");
 var fs            = require('fs');
 var path          = require('path');
+var events = require('../../components/events');
 
 var Queue = function() {
-  EventEmitter.call(this);
   this.stack = {};
   this.ready = [];
   this.current = 666;
   this.up = require('./up.model');
 }
-
-//  inherit EventEmitter
-util.inherits(Queue, EventEmitter);
 
 
 Queue.prototype.constructor = Queue;
@@ -45,7 +41,7 @@ Queue.prototype.add = function (stream, img) {
   var self = this, file, saveTo;
 
   //  INIT
-  this.emit('image.upload.init', img);
+  events.emitter.emit('image.upload.init', img);
 
   //  store stream and doc
   file = {
@@ -64,7 +60,7 @@ Queue.prototype.add = function (stream, img) {
   //  pipe to cloud storage
   this.up.sendOriginal(stream, img.id).then(
     function (data) { self.onOriginal(img.id, data); },
-    function (err) { self.emit('image.upload.error', img.id, err); }
+    function (err) { events.emitter.emit('image.upload.error', img.id, err); }
   );
 }
 
@@ -83,13 +79,13 @@ Queue.prototype.processCurrent = function () {
       function (img) {
         img.temporary = 0;
         img.save(function(err){
-          if (err) { self.emit('image.upload.error', file.image.id, err); }
+          if (err) { events.emitter.emit('image.upload.error', file.image.id, err); }
           img.exif = [];  //  let's skip the exif
-          self.emit('image.upload.complete', img);
+          events.emitter.emit('image.upload.complete', img);
           self.bubble();
         });
       },
-      function (err) { self.emit('image.upload.error', file.image.id, err); }
+      function (err) { events.emitter.emit('image.upload.error', file.image.id, err); }
     );
   }
 }
@@ -98,7 +94,7 @@ Queue.prototype.processCurrent = function () {
 Queue.prototype.onOriginal = function (id, data) {
   var file;
 
-  this.emit('image.upload.original', id, data);
+  events.emitter.emit('image.upload.original', id, data);
   if (this.stack[id]) {
     file = this.stack[id];
     delete this.stack[id];
@@ -127,10 +123,10 @@ Queue.prototype.onProgress = function (key, bucket, total) {
   var self = this;
   switch(bucket){
     case process.env.AWS_ORIGINAL_BUCKET:
-      self.emit('image.upload.original.progress', key, total);
+      events.emitter.emit('image.upload.original.progress', key, total);
       break;
     case process.env.AWS_THUMB_BUCKET:
-      self.emit('image.upload.derivatives.progress', key, total);
+      events.emitter.emit('image.upload.derivatives.progress', key, total);
       break;
   }
 }
@@ -142,20 +138,20 @@ Queue.prototype.abort = function (id) {
   //  abort current and move on
   if (typeof this.current.image.id !== 'undefined' && this.current.image.id == id) {
     this.up.abort();
-    this.emit('image.upload.abort', id);
+    events.emitter.emit('image.upload.abort', id);
     this.bubble(this.current.image.id, {});
   } else {
   //  remove from ready queue items
     this.ready.forEach( function(r, i){
       if (r.image.id == id) {
         delete self.ready[i];
-        this.emit('image.upload.cancel', id);
+        events.emitter.emit('image.upload.cancel', id);
         return true;
       }
     });
     if (typeof this.stack[id] !== 'undefined') {
       delete this.stack[id];
-      this.emit('image.upload.cancel', id);
+      events.emitter.emit('image.upload.cancel', id);
       return true;
     }
   }
