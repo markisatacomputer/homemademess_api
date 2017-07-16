@@ -38,7 +38,7 @@ Queue.prototype.constructor = Queue;
 
 //  add original to queue
 Queue.prototype.add = function (stream, img) {
-  var self = this, file, saveTo;
+  var self = this, deferred = Q.defer(), file, saveTo;
 
   //  INIT
   events.emitter.emit('image.upload.init', img);
@@ -59,9 +59,17 @@ Queue.prototype.add = function (stream, img) {
 
   //  pipe to cloud storage
   this.up.sendOriginal(stream, img.id).then(
-    function (data) { self.onOriginal(img.id, data); },
-    function (err) { events.emitter.emit('image.upload.error', img.id, err); }
+    function (data) {
+      self.onOriginal(img.id, data);
+      deferred.resolve(data);
+    },
+    function (err) {
+      events.emitter.emit('image.upload.error', img.id, err);
+      deferred.reject(err);
+    }
   );
+
+  return deferred.promise;
 }
 
 //  Initialize upload of current original

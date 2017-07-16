@@ -34,10 +34,11 @@ exports.index = function(req, res) {
     i.save(function(err){
       if (err) { return logErr(err, res); }
 
-      //  add file stream to processing queue
-      Queue.add(file, i);
-      //  respond to request
-      return res.json(200, i);
+      //  add file stream to processing queue and respond
+      Queue.add(file, i).then(
+        function(data) { return res.json(200, data); },
+        function(err) { return res.json(500, err); }
+      );
     });
   });
 
