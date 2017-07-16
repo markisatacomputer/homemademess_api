@@ -4,59 +4,44 @@
 
 'use strict';
 
-var Upload = require('./up.model');
 var Queue  = require('./up.queue');
-var image = require('../image/image.model');
-var _      = require('lodash');
+var Up     = require('./up.model');
 
 exports.register = function(socket) {
+  var register = [ 'image.upload.init', 'image.upload.original', 'image.upload.exif', 'image.upload.complete', 'image.upload.error', 'image.upload.abort', 'image.upload.cancel'];
 
-  var onS3Progress = function (id, progress) {
-    socket.emit('image:upload:progress', id, progress, this.total);
-  }
-
-  var onStackBegin = function(id, img) {
-    console.log('image:upload:begin', img._id);
-    socket.emit('image:upload:begin', img);
-  }
-
-  var onStackEnd = function(id, img) {
-    //  save and then emit
-    image.update({_id: id}, {temporary: 0}, function (err, i) {
-      if(err) {
-        console.log ('image:upload:complete', err);
-        socket.emit('image:upload:complete:error', err);
-      } else {
-        console.log('image:upload:complete', img._id);
-        socket.emit('image:upload:complete', img);
-      }
+  register.forEach( function(name, i, arr){
+    Queue.removeAllListeners(name);
+    Queue.on(name, function () {
+      var args;
+      //  get all arguments
+      args = Array.apply(null, arguments);
+      //  use colons for socket msg names
+      name = name.replace(/\./g, ':');
+      //  add name to args array
+      args.unshift(name);
+      //  send
+      socket.emit.apply(socket, args);
+      console.log.apply(this, args);
     });
-
-    Queue.bubble(id).then(function(current){
-      //  emit when queue is empty
-      if (current === 666) {
-        socket.emit('image:upload:allcomplete');
-      }
-    });
-  }
-
-  var onQueueDone = function() {
-    console.log('upload:queue:complete');
-    socket.emit('upload:queue:complete');
-  }
-  //  Remove listeners
-  Upload.removeAllListeners('S3Progress');
-  Upload.removeAllListeners('StackBegin');
-  Upload.removeAllListeners('StackEnd');
-  Upload.removeAllListeners('StackBroken');
-  Upload.removeAllListeners('QueueDone');
-  //  Attach listeners
-  Upload.on('S3Progress', onS3Progress);
-  Upload.on('StackBegin', onStackBegin);
-  Upload.on('StackEnd', onStackEnd);
-  Upload.on('StackBroken', function(err){
-    socket.emit('image:upload:complete:error', err);
   });
-  Upload.on('QueueDone', onQueueDone);
+
+  register = [ 'image.upload.original.progress', 'image.upload.derivatives.progress' ]
+
+  register.forEach( function(name, i, arr){
+    Up.removeAllListeners(name);
+    Up.on(name, function () {
+      var args;
+      //  get all arguments
+      args = Array.apply(null, arguments);
+      //  use colons for socket msg names
+      name = name.replace(/\./g, ':');
+      //  add name to args array
+      args.unshift(name);
+      //  send
+      socket.emit.apply(socket, args);
+      console.log.apply(this, args);
+    });
+  });
 
 }

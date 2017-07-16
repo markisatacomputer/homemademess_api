@@ -12,6 +12,7 @@ var util            = require("util");
 var gm              = require('gm');
 var Q               = require('q');
 var _               = require('lodash');
+var exif            = require('./up.exif');
 
 // Log object upload result
 var logAndResolve = function (err, data, deferred) {
@@ -36,50 +37,19 @@ var Upload = function(file, IMG, params) {
     {name: 'lg', size: [800,1600]},
   ];
   this.S3 = [];
-  this.progress = {
-    loaded: {},
-    total: {}
-  };
+  this.progress = {};
 },
 logErr = function (err) {
   console.log(err);
 }
+
 //  inherit EventEmitter
 util.inherits(Upload, EventEmitter);
+
 //  Extend Prototype
 Upload.prototype.constructor = Upload;
 
-Upload.prototype.send = function() {
-  var self = this;
-  //self.emit('StackBegin', self.IMG.id, self.IMG);
-  self.convertOriginal().then(function(){
-    self.imageOrient().then(function(){
-      self.createThumbs().then(function(){
-        var derivativesPromise = self.upAllDerivatives();
-        Q.all([derivativesPromise]).then( function(done) {
-          //  cleanup
-          var cleanPromise = [];
-          cleanPromise.push(self.cleanup(self.file+'-oriented'));
-          cleanPromise.push(self.cleanup(self.file));
-          if (self.original != self.file) {
-            cleanPromise.push(self.cleanup(self.original));
-          }
-          Q.all(cleanPromise).then(function(yes){
-            //  empty S3 store
-            self.S3 = [];
-            self.progress.loaded = {};
-            self.progress.total = {};
-            //  emit
-            self.emit('StackEnd', self.IMG.id, self.IMG);
-          },
-          function(err){
-            self.emit('StackBroken', err);
-          });
-        }, logErr);
-      }, logErr);
-    }, logErr);
-  }, logErr);
-}
+
 
 //  Get S3 Connection
 Upload.prototype.getS3 = function(params) {
@@ -95,20 +65,8 @@ Upload.prototype.getS3 = function(params) {
 
   //  create S3 connection
   var S3 = new aws.S3.ManagedUpload({params: params});
-  var percent = 0;
-  S3.on('httpUploadProgress', function(progress){
-    //  Use all concurrent uploads to calculate progress
-    var loaded = self.updateProgress('loaded', progress.loaded ,this.body.path);
-    var total = self.updateProgress('total', progress.total ,this.body.path);
-    // check to make sure progress has changed significantly
-    var rightnow = Math.round((loaded/total)*100);
-    var acceptableProgress = Number(process.env.ACCEPTABLE_PROGRESS);
-    if ((rightnow - percent) > acceptableProgress) {
-      //  pass on progress event to server for socket
-      self.emit('S3Progress', self.IMG.id, rightnow);
-      percent = rightnow;
-    }
-  });
+  //  listen for progress
+  S3.on('httpUploadProgress', function (progress){ self.updateProgress(progress, this); });
 
   //  add to object store
   this.S3.push(S3);
@@ -117,34 +75,98 @@ Upload.prototype.getS3 = function(params) {
 }
 
 //  Caluclate progress values of all concurrent uploads updated
-Upload.prototype.updateProgress = function (name, value, path) {
-  var self = this;
-  var r = 0;
+Upload.prototype.updateProgress = function (progress, S3) {
+  var key, bucket, previous, rightnow, acceptableProgress;
 
-  self.progress[name][path] = value;
-  _.forEach(self.progress[name], function (v, key) {
-    r += Number(v);
-  });
-  return r;
+  key = progress.key;
+  bucket = S3.service.config.params.Bucket;
+
+  //  previous progress
+  if (this.progress[key]) {
+    previous = Math.round((this.progress[key].loaded/this.progress[key].total)*100);
+  } else {
+    previous = 0;
+  }
+
+  //  current progress
+  this.progress[key] = progress;
+  rightnow = Math.round((progress.loaded/progress.total)*100);
+
+  //  send if enough progress has happened
+  acceptableProgress = Number(process.env.ACCEPTABLE_PROGRESS);
+  if ((rightnow - previous) > acceptableProgress) {
+    switch(bucket){
+      case process.env.AWS_ORIGINAL_BUCKET:
+        this.emit('image.upload.original.progress', key, total);
+        break;
+      case process.env.AWS_THUMB_BUCKET:
+        this.emit('image.upload.derivatives.progress', key, total);
+        break;
+    }
+  }
+
+  //  clean up
+  if (rightnow == 100) {
+    delete this.progress[key];
+  }
 }
 
 //  Send Original File
-Upload.prototype.upOriginal = function() {
+Upload.prototype.sendOriginal = function(file, id) {
   var self = this;
   var deferred = Q.defer();
   //  make sure we've got something to send
-  if (self.file && self.IMG.id) {
-    var S3 = self.getS3();
+  if (file && id) {
+    var S3 = self.getS3({
+      Bucket: process.env.AWS_ORIGINAL_BUCKET,
+      Key: id,
+      Body: file
+    });
     //  send
     S3.send(function(err, data) {
-      //  pass on event to server for socket
-      self.emit('S3UploadEnd', self.IMG.id, data);
       //  log and end our promise
       logAndResolve(err, data, deferred);
     });
   } else {
     console.error('Upload.upOriginal called without setting file or IMG.');
   }
+
+  return deferred.promise;
+}
+
+Upload.prototype.sendDerivatives = function() {
+  var self, deferred;
+
+  self = this;
+  deferred = Q.defer();
+
+  self.convertOriginal().then(function(){
+    self.imageOrient().then(function(){
+      self.createThumbs().then(function(){
+        var exifPromise = exif.extract(self.file, self.IMG);
+        var derivativesPromise = self.upAllDerivatives();
+        Q.all([exifPromise, derivativesPromise]).then( function(done) {
+          //  cleanup
+          var cleanPromise = [];
+          cleanPromise.push(self.cleanup(self.file+'-oriented'));
+          cleanPromise.push(self.cleanup(self.file));
+          if (self.original != self.file) {
+            cleanPromise.push(self.cleanup(self.original));
+          }
+          Q.all(cleanPromise).then(function(yes){
+            //  empty S3 store
+            self.S3 = [];
+            self.progress.loaded = {};
+            self.progress.total = {};
+            deferred.resolve(self.IMG);
+          },
+          function(err){
+            deferred.reject(err);
+          });
+        }, logErr);
+      }, logErr);
+    }, logErr);
+  }, logErr);
 
   return deferred.promise;
 }
@@ -216,8 +238,6 @@ Upload.prototype.upDerivative = function() {
       if (data) {
         //  store uri in derivative
         self.derivative.uri =  data.Location;
-        //  pass on event to server for socket
-        self.emit('S3ThumbUploadEnd', self.IMG.id, data);
       }
       //  log and end our promise
       logAndResolve(err, data, deferred);
@@ -373,6 +393,7 @@ Upload.prototype.abort = function () {
   _.forEach(this.S3, function(S){
     S.abort();
   });
+  this.S3 = [];
 }
 
 var up = new Upload();

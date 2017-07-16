@@ -1,114 +1,171 @@
 /*
  *    Manage all S3 uploads in a synchonous manner
- *       1.  when an item is added to the queue, check to see if there is an upload in progress.  If not, start one with the first item in the queue.
- *       2.  when an upload is created, listen for it's end.  on end, delete that item and look to see if there's more items in the queue.  if so, start upload on first item in the queue.
- *       3.  on image:remove, check to see if present upload is being removed.  if so, abort and delete.
+ *       1.  when an item is added to the queue, pipe to local temp file and cloud storage object
+ *       2.  track document and make changes on upload and exif extract events - pass updates to socket
+ *       3.  track upload progress and pass event data to socket
+ *       4.  when an upload is created, listen for it's end.  on end, delete that item and look to see if there's more items in the queue.  if so, start upload on first item in the queue.
+ *       5.  on image:remove, check to see if present upload is being removed.  if so, abort and delete.
+ *       6.  emit events:
+ *             - image:upload:init
+ *             - image:upload:original:progress
+ *             - image:upload:original
+ *             - image:upload:exif
+ *             - image:upload:derivatives:progress
+ *             - image:upload:derivatives
+ *             - image:upload:complete
+ *             - image:upload:error
+ *             - image:upload:abort
  *
- *
- *
- *
- *                Combine this and Upload class?
- *                    - refactor .send() to use http://documentup.com/kriskowal/q/#sequences
  */
 
 'use strict';
 
-var _   = require('lodash');
-var Q   = require('q');
+var Q             = require('q');
+var EventEmitter  = require('events').EventEmitter;
+var util          = require("util");
+var fs            = require('fs');
+var path          = require('path');
 
 var Queue = function() {
-  this.stack = [];
-  this.files = {};
+  EventEmitter.call(this);
+  this.stack = {};
+  this.ready = [];
   this.current = 666;
   this.up = require('./up.model');
 }
+
+//  inherit EventEmitter
+util.inherits(Queue, EventEmitter);
+
+
 Queue.prototype.constructor = Queue;
+
 //  add original to queue
-Queue.prototype.add = function (path, id) {
-  // if nothing is being processed start upload
-  if (this.current === 666 && this.files[id] === undefined) {
-    //  get uploads started
-    this.current = id;
-    this.files[id] = path;
-    this.sendCurrent();
-  //  otherwise add item to the stack
-  } else {
-    this.stack.push(id);
-    this.files[id] = path;
-  }
+Queue.prototype.add = function (stream, img) {
+  var self = this, file, saveTo;
+
+  //  INIT
+  this.emit('image.upload.init', img);
+
+  //  store stream and doc
+  file = {
+    stream: stream,
+    image: img
+  };
+
+  //  pipe to temp file
+  saveTo = path.join(process.env.UPLOAD_PATH, path.basename(img.filename));
+  stream.pipe(fs.createWriteStream(saveTo));
+  file.path = saveTo;
+
+  //  put in the stack
+  this.stack[img.id] = file;
+
+  //  pipe to cloud storage
+  this.up.sendOriginal(stream, img.id).then(
+    function (data) { self.onOriginal(img.id, data); },
+    function (err) { self.emit('image.upload.error', img.id, err); }
+  );
 }
-//  get temp path of current original being processed
-Queue.prototype.getCurrentPath = function () {
-  //  if there is a current return path from this.files, otherwise false
-  if (this.current && this.files[this.current]) {
-    return this.files[this.current];
-  } else {
-    return false;
-  }
-}
+
 //  Initialize upload of current original
-Queue.prototype.sendCurrent = function () {
-  if (this.current) {
-    var self = this;
-    //  get db record
-    var Image = require('../image/image.model');
-    Image.findById(self.current, function(err, IMG) {
-      if (err) {
-        console.log('DB Error - findById: ', err);
-      } else {
-        //  Send this image
-        self.up.file = self.getCurrentPath();
-        self.up.IMG = IMG;
-        self.up.id = IMG.id;
-        self.up.send();
-      }
-    });
+Queue.prototype.processCurrent = function () {
+  var self = this, file = this.current;
+
+  if (file !== 666 && this.up.IMG.id !== file.image.id) {
+    //  Send this image
+    this.up.params = {}
+    this.up.file = file.path;
+    this.up.IMG = file.image;
+    this.up.id = file.image.id;
+    this.up.sendDerivatives().then(
+      //  on success - save file and emit
+      function (img) {
+        img.temporary = 0;
+        img.save(function(err){
+          if (err) { self.emit('image.upload.error', file.image.id, err); }
+          img.exif = [];  //  let's skip the exif
+          self.emit('image.upload.complete', img);
+          self.bubble();
+        });
+      },
+      function (err) { self.emit('image.upload.error', file.image.id, err); }
+    );
   }
 }
-//  Clean finished upload and move to next original
-Queue.prototype.bubble = function (id) {
-  var self = this;
-  var deferred = Q.defer();
 
-  //  make sure nothing funny is going on
-  if (self.current === id) {
-    //  first clean files obj
-    delete self.files[self.current];
-    //  if stack contains items, send the first one
-    if (self.stack.length > 0) {
-      self.current = self.stack.shift();
+//  Move Queue item to ready for processing
+Queue.prototype.onOriginal = function (id, data) {
+  var file;
 
-      //  clear params so they will be reset
-      self.up.params = {};
-      self.sendCurrent();
-    //  if stack is empty, reset current indicator
-    } else  {
-      self.current = 666;
-      self.up.emit('QueueDone');
+  this.emit('image.upload.original', id, data);
+  if (this.stack[id]) {
+    file = this.stack[id];
+    delete this.stack[id];
+    if (this.current === 666) {
+      this.current = file;
+      this.processCurrent();
+    } else {
+      this.ready.push(file);
     }
-    deferred.resolve(self.current);
-  } else {
-    console.log('Something is wrong... Stack End passed id '+id+' this.current is '+self.current);
   }
-
-  return deferred.promise;
 }
+
+//  Clean finished upload and move to next original
+Queue.prototype.bubble = function () {
+  //  if there are queue items ready, send the first one
+  if (this.ready.length > 0) {
+    this.current = this.ready.shift();
+    this.processCurrent();
+  //  if not, reset current indicator
+  } else  {
+    this.current = 666;
+  }
+}
+
+Queue.prototype.onProgress = function (key, bucket, total) {
+  var self = this;
+  switch(bucket){
+    case process.env.AWS_ORIGINAL_BUCKET:
+      self.emit('image.upload.original.progress', key, total);
+      break;
+    case process.env.AWS_THUMB_BUCKET:
+      self.emit('image.upload.derivatives.progress', key, total);
+      break;
+  }
+}
+
 //  If there is a current upload, and it's record id matches, abort it
 Queue.prototype.abort = function (id) {
-  var p = this.getCurrentPath();
-  if (p !== false) {
-    var i = this.current[p];
-    //  if current queue, abort and move on
-    if (id === i) {
-      this.up.abort();
-      //  move on to the next if it exists
-      this.bubble(id);
-    //  if not, remove from queue
-    } else {
-      delete this.files[id];
-      _.pull(this.stack, id);
+  var self = this;
+
+  //  abort current and move on
+  if (typeof this.current.image.id !== 'undefined' && this.current.image.id == id) {
+    this.up.abort();
+    this.emit('image.upload.abort', id);
+    this.bubble(this.current.image.id, {});
+  } else {
+  //  remove from ready queue items
+    this.ready.forEach( function(r, i){
+      if (r.image.id == id) {
+        delete self.ready[i];
+        this.emit('image.upload.cancel', id);
+        return true;
+      }
+    });
+    if (typeof this.stack[id] !== 'undefined') {
+      delete this.stack[id];
+      this.emit('image.upload.cancel', id);
+      return true;
     }
   }
+}
+
+Queue.prototype.abortAll = function () {
+  this.up.abort();
+  this.current = 666;
+  this.ready = [];
+  this.stack = {};
 }
 
 var ex = new Queue();

@@ -2,11 +2,7 @@
 
 var Queue  = require('./up.queue');
 var Image  = require('../image/image.model');
-var exif   = require('./up.exif');
 var Busboy = require('busboy');
-var path   = require('path');
-var fs     = require('fs');
-var Up     = require('./up.model');
 
 /*      Process upload
  *
@@ -17,7 +13,7 @@ var Up     = require('./up.model');
  *    5. Return Image record for app api use
  */
 function logErr (err, res) {
-  console.log(err);
+  console.log('Upload Error: ', err);
   return res.json(500, err);
 }
 exports.index = function(req, res) {
@@ -26,9 +22,6 @@ exports.index = function(req, res) {
   //  stream incoming files
   busboy = new Busboy({ headers: req.headers });
   busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
-    //  save temp file
-    saveTo = path.join(process.env.UPLOAD_PATH, path.basename(filename));
-    file.pipe(fs.createWriteStream(saveTo));
 
     // create new image doc
     var i = new Image();
@@ -40,31 +33,23 @@ exports.index = function(req, res) {
     //  save image doc
     i.save(function(err){
       if (err) { return logErr(err, res); }
-    //  send stream to S3 managed upload
-      S3 = Up.getS3({
-        Bucket: process.env.AWS_ORIGINAL_BUCKET,
-        Key: i.id,
-        Body: file
-      });
-      Up.emit('StackBegin', i.id, i);
-      S3.send( function(err, data) {
-        Up.emit('S3UploadEnd', i.id, data);
-        //  get exif and save
-        exif.extract(saveTo, i).then(
-          function (doc) {
-            //  add file to processing queue
-            Queue.add(saveTo, i.id);
-            //  respond to request
-            return res.json(200, doc);
-          },
-          function (err) { return logErr(err, res); }
-        );
-      });
 
+      //  add file stream to processing queue
+      Queue.add(file, i);
+      //  respond to request
+      return res.json(200, i);
     });
   });
 
-  busboy.on('error', function(err){ console.log('error: ', err); });
+  busboy.on('error', function(err){ logErr(err); });
 
   return req.pipe(busboy);
 };
+
+exports.status = function(req, res) {
+  return req.json(200, {
+    ready: Queue.ready,
+    current: Queue.current
+  });
+}
+
