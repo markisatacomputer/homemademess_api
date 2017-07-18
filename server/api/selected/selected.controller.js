@@ -155,7 +155,6 @@ exports.getTags = function(req, res) {
 
 //  ADD TAGS
 exports.saveTags = function(req, res) {
-  console.log(req.body);
   Image.update(
     { selected: { $elemMatch: { $eq: req.user._id } } },
     { $addToSet:
