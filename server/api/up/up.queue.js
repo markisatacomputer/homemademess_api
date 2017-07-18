@@ -144,10 +144,12 @@ Queue.prototype.abort = function (id) {
   var self = this;
 
   //  abort current and move on
-  if (typeof this.current.image.id !== 'undefined' && this.current.image.id == id) {
-    this.up.abort();
-    events.emitter.emit('image.upload.abort', id);
-    this.bubble(this.current.image.id, {});
+  if (typeof this.current !== 666) {
+    if (this.current.image.id == id) {
+      this.up.abort();
+      events.emitter.emit('image.upload.abort', id);
+      this.bubble(this.current.image.id, {});
+    }
   } else {
   //  remove from ready queue items
     this.ready.forEach( function(r, i){
@@ -157,6 +159,7 @@ Queue.prototype.abort = function (id) {
         return true;
       }
     });
+    //  remove from uploading stack
     if (typeof this.stack[id] !== 'undefined') {
       delete this.stack[id];
       events.emitter.emit('image.upload.cancel', id);
