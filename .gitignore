@@ -2,8 +2,6 @@ node_modules
 .DS_Store
 *tmp
 .idea
-/server/config/local.env.js
-/server/config/seed.js
 *.pem
 *.key
 .env.json
