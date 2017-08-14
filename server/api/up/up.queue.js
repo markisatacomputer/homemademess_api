@@ -144,7 +144,7 @@ Queue.prototype.abort = function (id) {
   var self = this;
 
   //  abort current and move on
-  if (typeof this.current !== 666) {
+  if (this.current !== 666) {
     if (this.current.image.id == id) {
       this.up.abort();
       events.emitter.emit('image.upload.abort', id);
