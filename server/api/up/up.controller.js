@@ -48,7 +48,8 @@ exports.index = function(req, res) {
 };
 
 exports.status = function(req, res) {
-  return req.json(200, {
+  return res.json(200, {
+    stack: Queue.stack,
     ready: Queue.ready,
     current: Queue.current
   });
