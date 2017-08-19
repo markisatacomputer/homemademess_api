@@ -18,6 +18,7 @@ var events          = require('../../components/events');
 var logAndResolve = function (err, data, deferred) {
   if (err) {
     console.log('Error: ', err);
+    events.emitter.emit('image.upload.error', err);
     deferred.reject(err);
   } else {
     console.log(data);
@@ -39,7 +40,7 @@ var Upload = function(file, IMG, params) {
   this.progress = {};
 },
 logErr = function (err) {
-  console.log(err);
+  console.log('Error: ', err);
 }
 
 
