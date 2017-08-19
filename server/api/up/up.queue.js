@@ -76,25 +76,42 @@ Queue.prototype.add = function (stream, img) {
 Queue.prototype.processCurrent = function () {
   var self = this, file = this.current;
 
-  if (file !== 666 && this.up.IMG.id !== file.image.id) {
-    //  Send this image
-    this.up.params = {}
-    this.up.file = file.path;
-    this.up.IMG = file.image;
-    this.up.id = file.image.id;
-    this.up.sendDerivatives().then(
-      //  on success - save file and emit
-      function (img) {
-        img.temporary = 0;
-        img.save(function(err){
-          if (err) { events.emitter.emit('image.upload.error', file.image.id, err); }
-          img.exif = [];  //  let's skip the exif
-          events.emitter.emit('image.upload.complete', img);
-          self.bubble();
-        });
-      },
-      function (err) { events.emitter.emit('image.upload.error', file.image.id, err); }
-    );
+  if (file !== 666){
+    //  Configure up object to current file if not already
+    if (this.up.IMG.id !== file.image.id) {
+      this.up.params = {}
+      this.up.file = file.path;
+      this.up.IMG = file.image;
+      this.up.id = file.image.id;
+    } else {
+      //  are we trying this again?
+      if (typeof self.current.retry == 'undefined') {
+        self.current.retry = 0;
+      } else if (self.current.retry < 3) {
+        self.current.retry++;
+      } else {
+        self.bubble();
+      }
+    }
+    //  Try to process up to 3 times
+    if (typeof self.current.retry == 'undefined' || self.current.retry < 3) {
+      this.up.sendDerivatives().then(
+        //  on success - save file and emit
+        function (img) {
+          img.temporary = 0;
+          img.save(function(err){
+            if (err) { events.emitter.emit('image.upload.error', file.image.id, err); }
+            img.exif = [];  //  let's skip the exif
+            events.emitter.emit('image.upload.complete', img);
+            self.bubble();
+          });
+        },
+        function (err) {
+          events.emitter.emit('image.upload.error', file.image.id, err);
+          self.processCurrent();
+        }
+      );
+    }
   }
 }
 
