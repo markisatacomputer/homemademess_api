@@ -65,9 +65,20 @@ exports.index = function(req, res) {
 
 // Get a single image
 exports.show = function(req, res) {
-  Image.findById(req.params.id, function (err, image) {
+  Image.findById(req.params.id)
+  .populate('exif.name', 'name')
+  .exec( function (err, image) {
     if(err) { return handleError(res, err); }
     if(!image) { return res.send(404); }
+
+    _.each(image.exif, function(exif, i) {
+      var exf = {
+        name: exif.name.name,
+        value: exif.value,
+        _id: exif._id
+      };
+      image.exif[i] = exf;
+    });
 
     return res.json(image);
   });
