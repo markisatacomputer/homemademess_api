@@ -5,14 +5,8 @@ var mongoose = require('mongoose'),
 
 var ObjectId = mongoose.Schema.Types.ObjectId
 
-var buckets = ('image.thumbnail.exif.gps.interoperability.makernote.mark').split('.');
-
 var ExifSchema = new Schema({
-  name: String,
-  bucket: {
-    type: String,
-    enum: buckets
-  }
+  name: String
 });
 
 module.exports = mongoose.model('Exif', ExifSchema);
