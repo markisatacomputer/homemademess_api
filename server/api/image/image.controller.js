@@ -67,6 +67,7 @@ exports.index = function(req, res) {
 exports.show = function(req, res) {
   Image.findById(req.params.id)
   .populate('exif.name', 'name')
+  .populate('tags')
   .exec( function (err, image) {
     if(err) { return handleError(res, err); }
     if(!image) { return res.send(404); }
