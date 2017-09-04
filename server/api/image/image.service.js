@@ -4,7 +4,8 @@ var mongoose = require('mongoose');
 var compose = require('composable-middleware');
 var Tag = require('../tag/tag.model');
 var Image = require('../image/image.model');
-var Q = require('q')
+var Q = require('q');
+var moment = require('moment');
 
 /**
  * Attaches query conditions to the request
@@ -57,6 +58,11 @@ function attachFilters() {
         if (req.query.hasOwnProperty('end')) {
           filter.date.to = Number(req.query.end);
         }
+        if (req.query.hasOwnProperty('up')) {
+          filter.date.up = req.query.up;
+          filter.date.up_g = (req.query.hasOwnProperty('up_g')) ? req.query.up_g : 'day';
+        }
+
         //  --  TAGS --
         //  tag id param
         if (req.query.hasOwnProperty('tags')) {
@@ -122,6 +128,7 @@ function attachConditions() {
         }
         //  --  DATE CONSTRAINTS --
         //        must be unix micro
+        //    CreateDate
         if (req.filter.date.hasOwnProperty('from') && req.filter.date.from !== 0 && Number.isInteger(req.filter.date.from)) {
           conditions.createDate = { $gte: req.filter.date.from }
         }
@@ -130,6 +137,13 @@ function attachConditions() {
             conditions.createDate.$lte = req.filter.date.to;
           } else {
             conditions.createDate = { $lte: req.filter.date.to }
+          }
+        }
+        //    UploadDate
+        if (req.filter.date.hasOwnProperty('up')) {
+          conditions.uploadDate = {
+            $gte: Number( moment(req.filter.date.up).startOf(req.filter.date.up_g).valueOf() ),
+            $lte: Number( moment(req.filter.date.up).endOf(req.filter.date.up_g).valueOf() )
           }
         }
       }
