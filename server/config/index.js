@@ -1,6 +1,20 @@
 'use strict';
 
 var path = require('path');
+var origin;
+var host;
+
+if (typeof process.env.ALLOWED_ORIGIN == 'undefined') {
+  origin = [];
+} else {
+  origin = process.env.ALLOWED_ORIGIN.split(' ');
+}
+
+if (typeof process.env.ALLOWED_HOST == 'undefined') {
+  host = [];
+} else {
+  host = process.env.ALLOWED_HOST.split(' ');
+}
 
 // All configurations will extend these options
 // ============================================
@@ -33,5 +47,11 @@ module.exports = {
         safe: true
       }
     }
+  },
+
+  //  Allowed origins - should be an array
+  allow: {
+    origin: origin,
+    host: host
   }
 };
