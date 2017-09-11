@@ -7,7 +7,10 @@
 var events = require('../../components/events');
 
 exports.register = function(socket) {
-  var register = [ 'image.upload.init', 'image.upload.original.progress', 'image.upload.original', 'image.upload.exif', 'image.upload.derivatives.progress', 'image.upload.complete', 'image.upload.error', 'image.upload.abort', 'image.upload.cancel'];
+  var register = [ 'upload.init',
+                   'upload.complete',
+                   'upload.error',
+                   'upload.cancel'];
 
   register.forEach( function(name, i, arr){
     events.emitter.removeAllListeners(name);

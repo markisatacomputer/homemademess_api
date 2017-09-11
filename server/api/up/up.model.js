@@ -4,33 +4,22 @@
 
 'use strict';
 
-var fs              = require('fs');
 var aws             = require('aws-sdk');
 aws.config.endpoint = process.env.AWS_ENDPOINT;
-var util            = require("util");
+var util            = require('util');
+var emitter         = require('events').EventEmitter;
 var gm              = require('gm');
 var Q               = require('q');
 var _               = require('lodash');
 var exif            = require('./up.exif');
 var events          = require('../../components/events');
+var stream          = require('stream');
 
-// Log object upload result
-var logAndResolve = function (err, data, deferred) {
-  if (err) {
-    console.log('Error: ', err);
-    events.emitter.emit('image.upload.error', err);
-    deferred.reject(err);
-  } else {
-    console.log(data);
-    deferred.resolve(data);
-  }
-}
+var Upload = function(file, image) {
+  var self = this;
 
-var Upload = function(file, IMG, params) {
-  this.original = this.file = typeof file!== 'undefined' ? file : 0;
-  this.IMG = typeof IMG !== 'undefined' ?  IMG : {id: 0};
-  this.derivative = {};
-  this.derivatives = [];
+  this.file = file;
+  this.IMG = image;
   this.derivativeSizes = [
     {name: 'sm', size: [300,600]},
     {name: 'md', size: [600,1200]},
@@ -38,351 +27,210 @@ var Upload = function(file, IMG, params) {
   ];
   this.S3 = [];
   this.progress = {};
-},
-logErr = function (err) {
-  console.log('Error: ', err);
-}
+  this.attempts = 0;
+  this.errors = [];
 
+  //  on create, send
+  this.send();
+  events.emitter.emit('upload.init', self.IMG._id);
+}
 
 //  Extend Prototype
 Upload.prototype.constructor = Upload;
 
-//  Get S3 Connection
-Upload.prototype.getS3 = function(params) {
+//  Inherit event emitter
+util.inherits(Upload, emitter);
+
+//  Error handler
+Upload.prototype.handleErr = function (err, deferred) {
   var self = this;
+
+  //  store error
+  this.errors.push(err);
+  //  reject promise
+  if (deferred && typeof deferred.reject == 'function') {
+    deferred.reject(this.errors);
+  }
+  //  emit
+  events.emitter.emit('upload.error', self.IMG._id);
+  //  retry
+  if (this.attempts < 3) {
+    this.send();
+  }
+}
+
+//  Send Original File
+Upload.prototype.send = function() {
+  var self = this,
+      deferred = Q.defer(),
+      sending;
+
+  //  make sure we've got something to send
+  if (this.file && this.IMG._id) {
+
+    self.attempts = self.attempts++;
+
+    //  write stream to file
+    sending = self.file
+    //  send to S3
+    .pipe(self.sendOriginal())
+    //  send Derivatives
+    .pipe(self.sendDerivatives())
+    //  get exif data
+    .pipe(self.getExif());
+
+    sending.on('error', self.handleErr);
+
+  }
+
+  return deferred.promise;
+}
+
+//  S3 wrapper
+Upload.prototype.sendToS3 = function(params, callback) {
+  var self = this,
+      pass = new stream.PassThrough(),
+      defaultParams,
+      S3;
+
   //  init params
-  if (typeof(params) === 'undefined') {
-    var params = {
-      Bucket: process.env.AWS_ORIGINAL_BUCKET,
-      Key: this.IMG.id,
-      Body: fs.createReadStream(this.file)
-    }
+  defaultParams = {
+    Bucket: process.env.AWS_ORIGINAL_BUCKET,
+    Key: this.IMG.id,
+    Body: pass
+  }
+  if (params && typeof params == 'object') {
+    Object.assign(defaultParams, params);
+    params = defaultParams;
+  } else {
+    params = defaultParams;
   }
 
   //  create S3 connection
-  var S3 = new aws.S3.ManagedUpload({params: params});
+  S3 = new aws.S3.ManagedUpload({params: params});
+
   //  listen for progress
-  S3.on('httpUploadProgress', function (progress){ self.updateProgress(progress, this); });
+  //S3.on('httpUploadProgress', function (progress){ self.updateProgress(progress, this); });
 
   //  add to object store
   this.S3.push(S3);
 
-  return S3;
-}
-
-//  Caluclate progress values of all concurrent uploads updated
-Upload.prototype.updateProgress = function (progress, S3) {
-  var key, bucket, previous, rightnow, acceptableProgress;
-
-  key = progress.key;
-  bucket = S3.service.config.params.Bucket;
-
-  //  previous progress
-  if (this.progress[key]) {
-    previous = Math.round((this.progress[key].loaded/this.progress[key].total)*100);
-  } else {
-    previous = 0;
-  }
-
-  //  current progress
-  this.progress[key] = progress;
-  rightnow = Math.round((progress.loaded/progress.total)*100);
-
-  //  send if enough progress has happened
-  acceptableProgress = Number(process.env.ACCEPTABLE_PROGRESS);
-  if ((rightnow - previous) > acceptableProgress) {
-    switch(bucket){
-      case process.env.AWS_ORIGINAL_BUCKET:
-        events.emitter.emit('image.upload.original.progress', key, total);
-        break;
-      case process.env.AWS_THUMB_BUCKET:
-        events.emitter.emit('image.upload.derivatives.progress', key, total);
-        break;
+  //  send
+  S3.send( function(err, data) {
+    if (err) {
+      self.handleErr(err);
     }
-  }
+    if (typeof callback == 'function') {
+      callback(err, data);
+    }
+  });
 
-  //  clean up
-  if (rightnow == 100) {
-    delete this.progress[key];
-  }
+  return pass;
 }
 
-//  Send Original File
-Upload.prototype.sendOriginal = function(file, id) {
+//  send original to S3
+Upload.prototype.sendOriginal = function() {
   var self = this;
-  var deferred = Q.defer();
-  //  make sure we've got something to send
-  if (file && id) {
-    var S3 = self.getS3({
-      Bucket: process.env.AWS_ORIGINAL_BUCKET,
-      Key: id,
-      Body: file
-    });
-    //  send
-    S3.send(function(err, data) {
-      //  log and end our promise
-      logAndResolve(err, data, deferred);
-    });
-  } else {
-    console.error('Upload.upOriginal called without setting file or IMG.');
-  }
 
-  return deferred.promise;
+  return this.sendToS3({
+    Key: self.IMG.id
+  }, function (err, data) {
+    //
+    self.original = true;
+  });
+}
+
+//  Send Derivative File
+Upload.prototype.sendDerivative = function(i) {
+  var self = this,
+      key;
+
+  //  set key for this derivative
+  key = self.IMG.id + '/' + self.derivativeSizes[i].name + '.jpg';
+
+  //  send
+  return this.sendToS3({
+    Bucket: process.env.AWS_THUMB_BUCKET,
+    Key: key,
+    ACL: 'public-read'
+  }, function (err, data) {
+    if (err) { self.handleErr(err); }
+
+    //  store location
+    self.derivativeSizes[i].uri = data.Location;
+    //  init IMG derivative storage
+    if (!self.IMG.derivative) {
+      self.IMG.derivative = [];
+    }
+    //  store derivative metadata
+    self.IMG.derivative.push(self.derivativeSizes[i]);
+    //  remove derivative template from self
+    delete self.derivativeSizes[i];
+    //  save record
+    self.saveIMG();
+  });
+
+  return false;
 }
 
 Upload.prototype.sendDerivatives = function() {
-  var self, deferred;
-
-  self = this;
-  deferred = Q.defer();
-
-  self.convertOriginal().then(function(){
-    self.imageOrient().then(function(){
-      self.createThumbs().then(function(){
-        var exifPromise = exif.extract(self.file, self.IMG);
-        var derivativesPromise = self.upAllDerivatives();
-        Q.all([exifPromise, derivativesPromise]).then( function(done) {
-          //  cleanup
-          var cleanPromise = [];
-          cleanPromise.push(self.cleanup(self.file+'-oriented'));
-          cleanPromise.push(self.cleanup(self.file));
-          if (self.original != self.file) {
-            cleanPromise.push(self.cleanup(self.original));
-          }
-          Q.all(cleanPromise).then(function(yes){
-            //  empty S3 store
-            self.S3 = [];
-            self.progress.loaded = {};
-            self.progress.total = {};
-            deferred.resolve(self.IMG);
-          },
-          function(err){
-            deferred.reject(err);
-          });
-        }, logErr);
-      }, logErr);
-    }, logErr);
-  }, logErr);
-
-  return deferred.promise;
-}
-
-Upload.prototype.upAllDerivatives = function(def) {
-  var self = this;
-  var deferred;
-  // init promise
-  if (typeof(def) === 'undefined') {
-    deferred = Q.defer();
-  } else {
-    deferred = def;
-  }
-
-  //  init derivatives
-  if (self.derivatives.length > 0) {
-    self.derivative = self.derivatives.shift();
-    // process the size  - thumb, upload, cleanup - then continue or resolve
-    self.upDerivative().then( function(){
-      self.cleanup(self.derivative.file).then( function(cleaned){
-        //  save derivative to db
-        self.IMG.derivative.push({
-          height: self.derivative.height,
-          width: self.derivative.width,
-          name: self.derivative.name,
-          uri: self.derivative.uri
-        });
-        self.IMG.save(function(err){
-          if (err) {
-            console.log('DB error', err);
-          }
-        });
-        if (cleaned) {
-          //  more?  then continue
-          if (self.derivatives.length > 0) {
-            self.upAllDerivatives(deferred);
-          } else {
-            self.derivative = {};
-            deferred.resolve(true);
-          }
-        }
-      }, function (e){
-        deferred.reject(e);
-      });
-    });
-  }
-
-  return deferred.promise;
-}
-
-//  Send Original File
-Upload.prototype.upDerivative = function() {
-  var self = this;
-  var params;
-  var deferred = Q.defer();
-  //  make sure we've got something to send
-  if (self.derivative.file && self.IMG.id) {
-    //  set params
-    self.derivative.key = self.IMG.id + '/' + self.derivative.name + '.jpg';
-    params = {
-      Bucket: process.env.AWS_THUMB_BUCKET,
-      Key: self.derivative.key,
-      Body: fs.createReadStream(self.derivative.file),
-      ACL: 'public-read'
-    }
-    var S3 = self.getS3(params);
-    //  send
-    S3.send( function(err, data) {
-      if (data) {
-        //  store uri in derivative
-        self.derivative.uri =  data.Location;
-      }
-      //  log and end our promise
-      logAndResolve(err, data, deferred);
-    });
-  } else {
-    console.error('Upload.upDerivative called without setting file or IMG.');
-  }
-
-  return deferred.promise;
-}
-
-//  Create all thumbs and store them in the object
-Upload.prototype.createThumbs = function(derivs, def) {
-  var self = this;
-  var deferred, derivatives, derivative;
-  //  init promise
-  if (typeof(def) === 'undefined') {
-    deferred = Q.defer();
-  } else {
-    deferred = def;
-  }
-
-  //  init derivatives
-  if (typeof(derivs) === 'undefined') {
-    //  make sure the object store is empty
-    self.derivatives = [];
-    //  clone template
-    derivatives = _.clone(self.derivativeSizes, true);
-    self.createThumbs(derivatives, deferred);
-  } else {
-    derivatives = derivs;
-    //  create thumb and add result to object store
-    self.derivative = derivatives.shift();
-    self.createThumb(derivative, deferred.reject).then( function() {
-      self.derivatives.push(self.derivative);
-      //  are we done or do we keep going?
-      if (derivatives.length > 0) {
-        self.createThumbs(derivatives, deferred);
-      } else {
-        deferred.resolve(true);
-      }
-    });
-  }
-
-  return deferred.promise;
-}
-
-Upload.prototype.createThumb = function (derivative) {
-  var self = this;
-  var deferred = Q.defer();
-  // use orientation fixed file to determine size
-  var img = gm(self.file+ '-oriented');
-  var thumbSize = self.derivative.size;
-  var file = process.env.UPLOAD_PATH + self.IMG.id + '-' + self.derivative.name;
-
-  // image is vertical we use height
-  if (self.IMG.width < self.IMG.height) {
-    // resize
-    img.resize(null,thumbSize[1]);
-    // store measurements for db
-    self.derivative.height = thumbSize[1];
-    self.derivative.width = Math.round((thumbSize[1]/self.IMG.height)*self.IMG.width);
-  // image is horizontal or square we use width
-  } else {
-    // resize
-    img.resize(null, thumbSize[0]);
-    // store measurements for db
-    self.derivative.height = thumbSize[0];
-    self.derivative.width = Math.round((thumbSize[0]/self.IMG.height)*self.IMG.width);
-  }
-
-  img.compress('JPEG').quality(60).write(file, function (err, stdout, stderr) {
-    self.derivative.file = file;
-    if (err) {
-      deferred.reject(err);
-    }
-    deferred.resolve(file);
-  });
-
-  return deferred.promise;
-}
-
-Upload.prototype.convertOriginal = function () {
   var self = this,
-  deferred = Q.defer();
+      pass = new stream.PassThrough(),
+      resize;
 
-  //  make sure this is stored...
-  self.original = self.file;
-
-  if (typeof self.IMG.fileType != 'undefined' && self.IMG.fileType == 'JPEG') {
-    //  if it's a JPEG, we're done
-    deferred.resolve(self.original);
-  } else {
-    //  convert the file to JPEG
-    self.file = self.file.split('.')[1] + '.jpg';
-    gm(self.original).write(self.file, function(err) {
-      if (err) { deferred.reject(err); }
-      deferred.resolve(self.file);
-    });
-  }
-
-  return deferred.promise;
-}
-
-Upload.prototype.imageOrient = function () {
-  var self = this;
-  var deferred = Q.defer();
-  var path = self.file+'-oriented';
-
-  // write oriented image
-  gm(self.file).autoOrient().write(path, function(err) {
-    // log errors
-    if (err) { deferred.reject(err); }
-    // return size of autoOriented image
-    gm(path).size(function(err, value) {
-      if (value) {
-        // save orientation fixed dimensions to db
-        self.IMG.width = value.width;
-        self.IMG.height = value.height;
-        self.IMG.save(function (err) {
-          if (err) {
-            console.log('Error writing derivative to db: ', err);
-            deferred.reject(err);
-          }
-          deferred.resolve(value);
-        });
-        deferred.resolve(value);
+  this.derivativeSizes.forEach( function(d, i) {
+    gm(pass).size({bufferStream: true}, function (err, size) {
+      //  determine resize dimension
+      if (size.width < size.height) {
+        self.derivativeSizes[i].height = d.size[1];
+        var ratio = self.derivativeSizes[i].height/d.size[1];
+        self.derivativeSizes[i].width = ratio*size.width;
       } else {
-        deferred.reject(err);
+        self.derivativeSizes[i].width = d.size[0];
+        var ratio = self.derivativeSizes[i].width/d.size[0];
+        self.derivativeSizes[i].height = ratio*size.height;
       }
+      //  process & send to S3
+      this
+      .resize(self.derivativeSizes[i].width, self.derivativeSizes[i].height)
+      .compress('JPEG')
+      .quality(60)
+      .stream()
+      .pipe(self.sendDerivative(i));
     });
   });
 
-  return deferred.promise;
+  return pass;
 }
 
+Upload.prototype.getExif = function () {
+  var self = this;
 
-//  Remove a tmp file
-Upload.prototype.cleanup = function(file) {
-  var deferred = Q.defer();
-
-  fs.unlink(file, function (err) {
-    if (err) {
-      deferred.reject(err);
+  return exif.extractPipe(
+    function (image) {
+      Object.assign(self.IMG, image);
+      self.saveIMG();
     }
-    deferred.resolve(true);
+  );
+}
+
+Upload.prototype.saveIMG = function() {
+  var self = this;
+
+  this.IMG.save( function(err, doc) {
+    if (err) { self.handleErr(err); }
+    if (doc) { self.IMG = doc; }
+
+    //  check if we're done
+    //  if so remove temporary stamp and save, then emit
+    if (self.derivativeSizes.length == 0  && self.IMG.exif.length > 0 && self.original) {
+      self.IMG.temporary = 0;
+      self.saveIMG();
+      events.emitter.emit('upload.complete', self.IMG._id);
+      self.emit('complete');
+    }
   });
 
-  return deferred.promise;
 }
 
 Upload.prototype.abort = function () {
@@ -390,8 +238,7 @@ Upload.prototype.abort = function () {
     S.abort();
   });
   this.S3 = [];
+  events.emitter.emit('upload.cancel', self.IMG._id);
 }
 
-var up = new Upload();
-
-module.exports = up;
+module.exports = Upload;

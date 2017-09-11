@@ -1,11 +1,12 @@
 'use strict';
 
-var _ = require('lodash');
-var Exif = require('../exif/exif.model');
+var _        = require('lodash');
+var Exif     = require('../exif/exif.model');
 var exiftool = require('node-exiftool');
-var ep = new exiftool.ExiftoolProcess();
-var Q = require('q');
-var moment = require('moment');
+var ep       = new exiftool.ExiftoolProcess();
+var Q        = require('q');
+var moment   = require('moment');
+var fs       = require('fs');
 
 function logErr (err, deferred) {
   if (err) {
@@ -122,7 +123,7 @@ function getExifValue(exif,accepted,transform) {
 function getValidDate(exif) {
   return getExifValue(
     exif,
-    ['CreateDate','DateCreated',  'DateTimeOriginal', 'DateTimeCreated', 'ModifyDate', 'FileModifyDate', 'Date'],
+    ['CreateDate','DateCreated', 'DateTimeOriginal', 'DateTimeCreated', 'ModifyDate', 'FileModifyDate', 'Date'],
     function (d) {
       var dateFormats, newd;
       dateFormats = ['YYYY:MM:DD hh:mm:ss', moment.ISO_8601]
@@ -148,11 +149,13 @@ function getOrientation(exif) {
   });
 }
 
-exports.extract = function (path, IMG) {
-  var deferred = Q.defer();
-  // get exif metadata
-  getExif(path).then( function (exif) {
+//  this works for files
+exports.extract = function (file) {
+  var deferred = Q.defer(),
+  IMG = {};
 
+  // get exif metadata
+  getExif(file).then( function (exif) {
     // set orientation
     IMG.orientation = getOrientation(exif);
     // set create date if existing
@@ -166,15 +169,24 @@ exports.extract = function (path, IMG) {
       // attach exif to image record
       IMG.exif = exifrefs;
 
-      // save the image to db and resolve
-      IMG.save(function (err, doc) {
-        if (err) {
-          deferred.reject(err);
-        }
-        deferred.resolve(doc);
-      });
+      deferred.resolve(IMG);
     });
   }, function(e) { logErr(e, deferred); });
 
   return deferred.promise;
+}
+
+//  this works for streams
+exports.extractPipe = function (callback) {
+  var self = this,
+      pass = fs.createWriteStream('temptemp');
+
+  pass.on('finish', function () {
+    self.extract('temptemp').then( function(image) {
+      callback(image);
+      fs.unlink('temptemp');
+    });
+  });
+
+  return pass;
 }

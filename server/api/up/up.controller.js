@@ -21,28 +21,34 @@ exports.index = function(req, res) {
 
   //  stream incoming files
   busboy = new Busboy({ headers: req.headers });
+
   busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
+    var IMG;
 
     // create new image doc
-    var i = new Image();
+    IMG = new Image();
     // save original filename
-    i.filename = filename;
+    IMG.filename = filename;
     // temporary - let's make it an hour limit
-    i.temporary = Date.now() + 3600000;
+    IMG.temporary = Date.now() + 3600000;
 
     //  save image doc
-    i.save(function(err){
-      if (err) { return logErr(err, res); }
-
-      //  add file stream to processing queue and respond
-      Queue.add(file, i).then(
-        function(data) { return res.json(200, data); },
-        function(err) { return res.json(500, err); }
-      );
+    IMG.save(function(err, data){
+      //  send response
+      if (err) {
+        return res.json(500, err);
+      } else {
+        //  add file stream to queue and respond
+        Queue.add(file, IMG);
+        return res.json(200, data);
+      }
     });
   });
 
-  busboy.on('error', function(err){ logErr(err); });
+  //  send errors
+  busboy.on('error', function (err){
+    logErr(err);
+  });
 
   return req.pipe(busboy);
 };
@@ -50,7 +56,6 @@ exports.index = function(req, res) {
 exports.status = function(req, res) {
   return res.json(200, {
     stack: Queue.stack,
-    ready: Queue.ready,
     current: Queue.current
   });
 }
