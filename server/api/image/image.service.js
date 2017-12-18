@@ -62,6 +62,9 @@ function attachFilters() {
           filter.date.up = req.query.up;
           filter.date.up_g = (req.query.hasOwnProperty('up_g')) ? req.query.up_g : 'day';
         }
+        if (req.query.hasOwnProperty('ids')) {
+          filter.ids = req.query.ids.slice(0,25);
+        }
 
         //  --  TAGS --
         //  tag id param
@@ -145,6 +148,9 @@ function attachConditions() {
             $gte: Number( moment(req.filter.date.up).startOf(req.filter.date.up_g).valueOf() ),
             $lte: Number( moment(req.filter.date.up).endOf(req.filter.date.up_g).valueOf() )
           }
+        }
+        if (req.filter.hasOwnProperty('ids')) {
+          conditions._id = { $in: req.filter.ids };
         }
       }
 
