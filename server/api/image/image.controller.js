@@ -63,24 +63,26 @@ exports.index = function(req, res) {
 
 };
 
+var reduceExif = function (exif) {
+  exif.forEach( function (e, i) {
+    exif[i] = {
+      _id: e.name._id,
+      name: e.name.name,
+      value: e.value
+    };
+  });
+  return exif;
+}
+
 // Get a single image
 exports.show = function(req, res) {
   Image.findById(req.params.id)
-  .populate('exif.name', 'name')
+  .populate('exif.name')
   .populate('tags')
   .exec( function (err, image) {
     if(err) { return handleError(res, err); }
     if(!image) { return res.send(404); }
-
-    _.each(image.exif, function(exif, i) {
-      var exf = {
-        name: exif.name.name,
-        value: exif.value,
-        _id: exif._id
-      };
-      image.exif[i] = exf;
-    });
-
+    image.exif = reduceExif(image.exif);
     return res.json(image);
   });
 };
@@ -96,13 +98,22 @@ exports.create = function(req, res) {
 // Updates an existing image in the DB.
 exports.update = function(req, res) {
   if(req.body._id) { delete req.body._id; }
-  Image.findById(req.params.id, function (err, image) {
+  Image.findById(req.params.id)
+  .exec( function (err, image) {
     if (err) { return handleError(res, err); }
     if(!image) { return res.send(404); }
     var updated = _.assign(image, req.body);
     updated.save(function (err) {
       if (err) { return handleError(res, err); }
-      return res.json(200, image);
+      //  poplulate paths
+      Image.populate( updated, [
+        {path: 'exif.name'},
+        {path: 'tags'}
+      ], function (err, image) {
+        if (err) { return handleError(res, err); }
+        image.exif = reduceExif(image.exif);
+        return res.json(200, image);
+      });
     });
   });
 };
