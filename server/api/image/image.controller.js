@@ -99,7 +99,7 @@ exports.update = function(req, res) {
   Image.findById(req.params.id, function (err, image) {
     if (err) { return handleError(res, err); }
     if(!image) { return res.send(404); }
-    var updated = _.merge(image, req.body);
+    var updated = _.assign(image, req.body);
     updated.save(function (err) {
       if (err) { return handleError(res, err); }
       return res.json(200, image);
