@@ -24,6 +24,14 @@ exports.index = function(req, res) {
       tags = req.query.text.replace(/_/g, ' ').split('~~');
       conditions = { text: { $in: tags } };
     }
+    //  filter by ids
+    if (req.query.hasOwnProperty('ids')) {
+      conditions = { _id: { $in: req.query.ids } };
+    }
+    //  filter by image ids
+    if (req.query.hasOwnProperty('iids')) {
+      conditions = { _images: { $in: req.query.iids } };
+    }
   }
   if (conditions !== null) {
     Tag.find(conditions, function (err, tags) {
