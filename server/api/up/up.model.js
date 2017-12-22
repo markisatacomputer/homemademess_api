@@ -139,26 +139,27 @@ Upload.prototype.sendDerivatives = function() {
   self.convertOriginal().then(function(){
     self.imageOrient().then(function(){
       self.createThumbs().then(function(){
-        var exifPromise = exif.extract(self.file, self.IMG);
-        var derivativesPromise = self.upAllDerivatives();
-        Q.all([exifPromise, derivativesPromise]).then( function(done) {
-          //  cleanup
-          var cleanPromise = [];
-          cleanPromise.push(self.cleanup(self.file+'-oriented'));
-          cleanPromise.push(self.cleanup(self.file));
-          if (self.original != self.file) {
-            cleanPromise.push(self.cleanup(self.original));
-          }
-          Q.all(cleanPromise).then(function(yes){
-            //  empty S3 store
-            self.S3 = [];
-            self.progress.loaded = {};
-            self.progress.total = {};
-            deferred.resolve(self.IMG);
-          },
-          function(err){
-            deferred.reject(err);
-          });
+        exif.extract(self.file, self.IMG).then( function(IMG) {
+          self.IMG = IMG;
+          self.upAllDerivatives().then( function(done) {
+            //  cleanup
+            var cleanPromise = [];
+            cleanPromise.push(self.cleanup(self.file+'-oriented'));
+            cleanPromise.push(self.cleanup(self.file));
+            if (self.original != self.file) {
+              cleanPromise.push(self.cleanup(self.original));
+            }
+            Q.all(cleanPromise).then(function(yes){
+              //  empty S3 store
+              self.S3 = [];
+              self.progress.loaded = {};
+              self.progress.total = {};
+              deferred.resolve(self.IMG);
+            },
+            function(err){
+              deferred.reject(err);
+            });
+          }, logErr);
         }, logErr);
       }, logErr);
     }, logErr);
