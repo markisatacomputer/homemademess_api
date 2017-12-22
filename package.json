@@ -19,7 +19,7 @@
     "lodash": "~3.9.3",
     "method-override": "~1.0.0",
     "moment": "^2.18.1",
-    "mongoose": "^4.7.5",
+    "mongoose": "^4.11.11",
     "morgan": "~1.0.0",
     "node-exiftool": "^2.1.1",
     "node-schedule": "^0.2.9",
