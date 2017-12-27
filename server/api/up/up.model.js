@@ -136,11 +136,11 @@ Upload.prototype.sendDerivatives = function() {
   self = this;
   deferred = Q.defer();
 
-  self.convertOriginal().then(function(){
-    self.imageOrient().then(function(){
-      self.createThumbs().then(function(){
-        exif.extract(self.file, self.IMG).then( function(IMG) {
-          self.IMG = IMG;
+  exif.extract(self.file, self.IMG).then( function(IMG) {
+    self.IMG = IMG;
+    self.convertOriginal().then(function(){
+      self.imageOrient().then(function(){
+        self.createThumbs().then(function(){
           self.upAllDerivatives().then( function(done) {
             //  cleanup
             var cleanPromise = [];
