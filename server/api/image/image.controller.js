@@ -33,31 +33,31 @@ exports.index = function(req, res) {
   .skip(filter.pagination.per*filter.pagination.page)
   .exec( function (err, images) {
 
-    if(err) { res.json(500, err); }
+    if(err) { res.json(500, err); } else {
+      // transform images as needed
+      _.each(images, function(image, i){
+        var selected;
 
-    // transform images as needed
-    _.each(images, function(image, i){
-      var selected;
-
-      //  only include selected for admin users
-      selected = false;
-      if (typeof(image.selected) !== 'undefined' && typeof(req.user._id) !== 'undefined') {
-        if (_.find(image.selected, req.user._id)) {
-          selected = true;
+        //  only include selected for admin users
+        selected = false;
+        if (typeof(image.selected) !== 'undefined' && typeof(req.user._id) !== 'undefined') {
+          if (_.find(image.selected, req.user._id)) {
+            selected = true;
+          }
         }
-      }
-      images[i].selected = selected;
+        images[i].selected = selected;
 
-      //  send aliased derivatives if env var set
-      if (typeof process.env.THUMB_DOMAIN_ALIAS !== 'undefined') {
-        images[i].derivativePath = process.env.THUMB_DOMAIN_ALIAS + '/' + image._id + '/';
-      }
-    });
+        //  send aliased derivatives if env var set
+        if (typeof process.env.THUMB_DOMAIN_ALIAS !== 'undefined') {
+          images[i].derivativePath = process.env.THUMB_DOMAIN_ALIAS + '/' + image._id + '/';
+        }
+      });
 
-    return res.json(200, {
-      images: images,
-      filter: filter
-    });
+      return res.json(200, {
+        images: images,
+        filter: filter
+      });
+    }
 
   });
 
