@@ -27,6 +27,8 @@ exports.index = function(req, res) {
     var i = new Image();
     // save original filename
     i.filename = filename;
+    // save original filename
+    i.mimeType = mimetype;
     // temporary - let's make it an hour limit
     i.temporary = Date.now() + 3600000;
 

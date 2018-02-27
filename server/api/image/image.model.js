@@ -26,6 +26,7 @@ var ImageSchema = new Schema({
   }],
   orientation: Number,
   fileType: String,
+  mimeType: String,
   width: Number,
   height: Number,
   original: String,
