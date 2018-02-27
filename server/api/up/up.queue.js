@@ -58,7 +58,7 @@ Queue.prototype.add = function (stream, img) {
   this.stack[img.id] = file;
 
   //  pipe to cloud storage
-  this.up.sendOriginal(stream, img.id).then(
+  this.up.sendOriginal(stream, img.id + '/' + img.filename).then(
     function (data) {
       self.onOriginal(img.id, data);
       deferred.resolve(data);
