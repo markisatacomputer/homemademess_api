@@ -13,6 +13,7 @@ var Q               = require('q');
 var _               = require('lodash');
 var exif            = require('./up.exif');
 var events          = require('../../components/events');
+var stream = require('stream');
 
 // Log object upload result
 var logAndResolve = function (err, data, deferred) {
@@ -111,12 +112,13 @@ Upload.prototype.updateProgress = function (progress, S3) {
 Upload.prototype.sendOriginal = function(file, id) {
   var self = this;
   var deferred = Q.defer();
+  var pt = file.pipe(new stream.PassThrough());
   //  make sure we've got something to send
   if (file && id) {
     var S3 = self.getS3({
       Bucket: process.env.AWS_ORIGINAL_BUCKET,
       Key: id,
-      Body: file
+      Body: pt
     });
     //  send
     S3.send(function(err, data) {
@@ -218,15 +220,19 @@ Upload.prototype.upAllDerivatives = function(def) {
 Upload.prototype.upDerivative = function() {
   var self = this;
   var params;
+  var rs;
   var deferred = Q.defer();
   //  make sure we've got something to send
   if (self.derivative.file && self.IMG.id) {
     //  set params
     self.derivative.key = self.IMG.id + '/' + self.derivative.name + '.jpg';
+    //  create readstream
+    rs = fs.createReadStream(self.derivative.file);
+
     params = {
       Bucket: process.env.AWS_THUMB_BUCKET,
       Key: self.derivative.key,
-      Body: fs.createReadStream(self.derivative.file),
+      Body: rs,
       ACL: 'public-read'
     }
     var S3 = self.getS3(params);
