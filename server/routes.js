@@ -34,6 +34,7 @@ module.exports = function(app) {
   app.use('/tags', require('./api/tag'));
   app.use('/tagged', require('./api/tagged'));
   app.use('/up', require('./api/up'));
+  app.use('/file', require('./api/file'));
   app.use('/users', require('./api/user'));
 
   //  Auth
