@@ -284,7 +284,7 @@ Upload.prototype.deriveVideos = function() {
           if (err) { gifdefer.reject(err); }
           if (data) {
             //  store uri in derivative
-            self.IMG.derivative.push({
+            self.IMG.derivative.unshift({
               height: 240,
               width: 320,
               name: 'gif',
