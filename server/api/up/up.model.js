@@ -217,7 +217,7 @@ Upload.prototype.deriveVideos = function() {
     console.log('Spawned Ffmpeg with command: ' + commandLine);
   })
   .on('progress', function(progress) {
-    console.log('Video Processing: ' + progress.percent + '% done');
+    console.log(self.IMG.filename+' Processing: ' + progress.percent + '% done');
   })
   .on('error', function(err, stdout, stderr) {
     console.log('Cannot process video: ' + err.message);
@@ -320,6 +320,9 @@ Upload.prototype.deriveVideos = function() {
       filename: '%00i.png',
       folder: filename
     });
+  },
+  function (err) {
+    deferred.reject(err);
   });
 
   return deferred.promise;
