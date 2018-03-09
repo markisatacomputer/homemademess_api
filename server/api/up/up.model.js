@@ -227,8 +227,9 @@ Upload.prototype.deriveVideos = function() {
     var params = {
       Bucket: process.env.AWS_THUMB_BUCKET,
       Key: self.IMG.id+'/'+dvfilename,
-      Body: dvfilename,
-      ACL: 'public-read'
+      Body: fs.createReadStream(dvfilename),
+      ACL: 'public-read',
+      ContentType: 'video/mp4'
     }
     var S3 = self.getS3(params);
     //  send
