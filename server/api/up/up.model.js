@@ -275,7 +275,7 @@ Upload.prototype.deriveVideos = function() {
         var params = {
           Bucket: process.env.AWS_THUMB_BUCKET,
           Key: self.IMG.id+'/'+giffilename,
-          Body: giffilename,
+          Body: fs.createReadStream(giffilename),
           ACL: 'public-read'
         }
         var S3 = self.getS3(params);
