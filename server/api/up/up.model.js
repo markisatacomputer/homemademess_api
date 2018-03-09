@@ -269,7 +269,7 @@ Upload.prototype.deriveVideos = function() {
     .on('end', function(stdout, stderr) {
       var encoder = new GIFEncoder(640, 480);
       pngFileStream(filename +'/*.png')
-      .pipe(encoder.createWriteStream({ repeat: 0, delay: 250, quality: 10 }))
+      .pipe(encoder.createWriteStream({ repeat: 0, delay: 200, quality: 10 }))
       .pipe(fs.createWriteStream(giffilename))
       .on('finish', function () {
         var params = {
