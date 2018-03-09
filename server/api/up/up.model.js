@@ -18,6 +18,7 @@ var stream          = require('stream');
 var ffmpeg          = require('fluent-ffmpeg');
 var GIFEncoder      = require('gifencoder');
 var pngFileStream   = require('png-file-stream');
+var rimraf          = require('rimraf');
 
 // Log object upload result
 var logAndResolve = function (err, data, deferred) {
@@ -151,10 +152,8 @@ Upload.prototype.sendDerivatives = function() {
         function(err) { deferred.reject(err); }
       );
     } else if (self.IMG.mimeType.indexOf('video') !== -1) {
-      self.deriveVideo().then(
-        function(IMG) {
-          console.log('IMG', IMG);
-          deferred.resolve(IMG); },
+      self.deriveVideos().then(
+        function(IMG) { deferred.resolve(IMG); },
         function(err) { deferred.reject(err); }
       );
     } else {
@@ -200,15 +199,12 @@ Upload.prototype.deriveImages = function() {
 
   return deferred.promise;
 }
-Upload.prototype.deriveVideo = function() {
-  console.log('deriveVideo');
+Upload.prototype.deriveVideos = function() {
   var self = this;
   var deferred = Q.defer();
   var viddefer = Q.defer();
-  var gifdefer = Q.defer();
-  var tasks = array(viddefer.promise, gifdefer.promise);
   var filename = self.IMG.filename.split('.')[0];
-  var dvfilename = filename+'.mp4';
+  var dvfilename = '640x480.mp4';
   var giffilename = filename+'.gif';
   //var stream  = fs.createWriteStream(filename);
 
@@ -248,76 +244,83 @@ Upload.prototype.deriveVideo = function() {
         });
         self.IMG.save(function(err){
           if (err) { viddefer.reject(err); }
-          //  remove mp4 file
-          self.cleanup(dvfilename).then(
-            function (data) { viddefer.resolve(data); },
-            function (err) { viddefer.reject(err); }
-          );
+          viddefer.resolve(data);
         });
       }
     });
   })
-  .save(filename);
+  .save(dvfilename);
 
-  ffmpeg(self.file)
-  .size('320x240')
-  .autopad()
-  .screenshots({
-    count: 24,
-    filename: '%000i.png',
-    folder: path.join(process.env.UPLOAD_PATH, path.basename(filename))
-  })
-  .on('start', function(commandLine) {
-    console.log('Spawned Ffmpeg with command: ' + commandLine);
-  })
-  .on('progress', function(progress) {
-    console.log('Video Processing: ' + progress.percent + '% done');
-  })
-  .on('error', function(err, stdout, stderr) {
-    console.log('Cannot process video: ' + err.message);
-    deferred.reject(err);
-  })
-  .on('end', function(stdout, stderr) {
-    var encoder = new GIFEncoder(320, 240);
-    pngFileStream(path.join(process.env.UPLOAD_PATH, path.basename(filename)) +'/?.png')
-    .pipe(encoder.createWriteStream({ repeat: 0, delay: 250, quality: 10 }))
-    .pipe(fs.createWriteStream(giffilename))
-    .on('finish', function () {
-      var params = {
-        Bucket: process.env.AWS_THUMB_BUCKET,
-        Key: self.IMG.id+'/'+giffilename,
-        Body: giffilename,
-        ACL: 'public-read'
-      }
-      var S3 = self.getS3(params);
-      //  send
-      S3.send( function(err, data) {
-        if (err) { gifdefer.reject(err); }
-        if (data) {
-          //  store uri in derivative
-          self.IMG.derivative.push({
-            height: 240,
-            width: 320,
-            name: 'gif',
-            uri: data.Location
-          });
-          self.IMG.save(function(err){
-            if (err) { gifdefer.reject(err); }
-            //  remove mp4 file
-            self.cleanup(giffilename).then(
-              function (data) { gifdefer.resolve(data); },
-              function (err) { gifdefer.reject(err); }
-            );
-          });
+  viddefer.promise.then(function(data) {
+    ffmpeg(dvfilename)
+    .on('start', function(commandLine) {
+      console.log('Spawned Ffmpeg with command: ' + commandLine);
+    })
+    .on('progress', function(progress) {
+      console.log('Working...');
+    })
+    .on('error', function(err, stdout, stderr) {
+      console.log('Cannot process video: ' + err.message);
+      deferred.reject(err);
+    })
+    .on('filenames', function(filenames) {
+      console.log('Will generate ' + filenames.join(', '))
+    })
+    .on('end', function(stdout, stderr) {
+      var encoder = new GIFEncoder(640, 480);
+      pngFileStream(filename +'/*.png')
+      .pipe(encoder.createWriteStream({ repeat: 0, delay: 250, quality: 10 }))
+      .pipe(fs.createWriteStream(giffilename))
+      .on('finish', function () {
+        var params = {
+          Bucket: process.env.AWS_THUMB_BUCKET,
+          Key: self.IMG.id+'/'+giffilename,
+          Body: giffilename,
+          ACL: 'public-read'
         }
+        var S3 = self.getS3(params);
+        //  send
+        S3.send( function(err, data) {
+          if (err) { gifdefer.reject(err); }
+          if (data) {
+            //  store uri in derivative
+            self.IMG.derivative.push({
+              height: 240,
+              width: 320,
+              name: 'gif',
+              uri: data.Location
+            });
+            self.IMG.save(function(err){
+              var tasks = [];
+              if (err) { deferred.reject(err); }
+
+              //  remove mp4 file
+              tasks.push(self.cleanup(dvfilename));
+              //  remove gif
+              tasks.push(self.cleanup(giffilename));
+              //  remove pngs
+              var cleangif = Q.defer();
+              tasks.push(cleangif.promise);
+              rimraf(filename, function(){
+                cleangif.resolve(true);
+              });
+              // everything deleted?
+              //   WE ARE DONE
+              Q.all(tasks).then(
+                function (data) { deferred.resolve(self.IMG); },
+                function (err) { deferred.reject(err); }
+              );
+            });
+          }
+        });
       });
+    })
+    .screenshots({
+      count: 24,
+      filename: '%00i.png',
+      folder: filename
     });
   });
-
-  Q.all(tasks).then(
-    function (data) { deferred.resolve(self.IMG); },
-    function (err) { deferred.reject(err); }
-  );
 
   return deferred.promise;
 }
