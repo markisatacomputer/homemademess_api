@@ -277,7 +277,8 @@ Upload.prototype.deriveVideos = function() {
           Bucket: process.env.AWS_THUMB_BUCKET,
           Key: self.IMG.id+'/'+giffilename,
           Body: fs.createReadStream(giffilename),
-          ACL: 'public-read'
+          ACL: 'public-read',
+          ContentType: 'image/gif'
         }
         var S3 = self.getS3(params);
         //  send
@@ -392,7 +393,8 @@ Upload.prototype.upDerivative = function() {
       Bucket: process.env.AWS_THUMB_BUCKET,
       Key: self.derivative.key,
       Body: rs,
-      ACL: 'public-read'
+      ACL: 'public-read',
+      ContentType: 'image/jpeg'
     }
     var S3 = self.getS3(params);
     //  send
