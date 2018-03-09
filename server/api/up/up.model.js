@@ -513,23 +513,7 @@ Upload.prototype.imageOrient = function () {
     // log errors
     if (err) { deferred.reject(err); }
     // return size of autoOriented image
-    gm(path).size(function(err, value) {
-      if (value) {
-        // save orientation fixed dimensions to db
-        self.IMG.width = value.width;
-        self.IMG.height = value.height;
-        self.IMG.save(function (err) {
-          if (err) {
-            console.log('Error writing derivative to db: ', err);
-            deferred.reject(err);
-          }
-          deferred.resolve(value);
-        });
-        deferred.resolve(value);
-      } else {
-        deferred.reject(err);
-      }
-    });
+    deferred.resolve(path);
   });
 
   return deferred.promise;

@@ -109,7 +109,7 @@ function getExifValue(exif,accepted,transform) {
   //console.log(t);
 
   //  transform even if not found
-  if (transform) {
+  if (transform && t) {
     t = transform(t);
   }
 
@@ -122,7 +122,7 @@ function getExifValue(exif,accepted,transform) {
 function getValidDate(exif) {
   return getExifValue(
     exif,
-    ['CreateDate','DateCreated',  'DateTimeOriginal', 'DateTimeCreated', 'ModifyDate', 'FileModifyDate', 'Date'],
+    ['createdate','datecreated',  'datetimeoriginal', 'datetimecreated', 'modifydate', 'filemodifydate', 'date'],
     function (d) {
       var dateFormats, newd;
       dateFormats = ['YYYY:MM:DD hh:mm:ss', moment.ISO_8601]
@@ -136,29 +136,48 @@ function getValidDate(exif) {
 }
 
 function getType(exif) {
-  return getExifValue( exif, ['FileType'] );
+  return getExifValue( exif, ['filetype'] );
 }
 
 function getOrientation(exif) {
-  return getExifValue( exif, ['Orientation'], function(o) {
+  return getExifValue( exif, ['orientation'], function(o) {
     switch(o) {
       default:
         return 1;
     }
   });
 }
+function getSize(exif) {
+  var size = getExifValue( exif, ['imagesize'] );
+  if (size) {
+    return size.split('x');
+  }
+  var width = getExifValue( exif, ['imagewidth', 'exifimagewidth'] );
+  var height = getExifValue( exif, ['imageheight', 'exifimageheight'] );
+  if (width && height) {
+    return [width,height];
+  }
+
+}
 
 exports.extract = function (path, IMG) {
   var deferred = Q.defer();
   // get exif metadata
   getExif(path).then( function (exif) {
-
+    var exifi = _.mapKeys(exif, function(value, key){
+      return key.toLowerCase();
+    });
     // set orientation
-    IMG.orientation = getOrientation(exif);
+    IMG.orientation = getOrientation(exifi);
     // set create date if existing
-    IMG.createDate = getValidDate(exif);
+    IMG.createDate = getValidDate(exifi);
     // set fileType
-    IMG.fileType = getType(exif);
+    IMG.fileType = getType(exifi);
+
+    // set dimensions
+    var size = getSize(exifi);
+    IMG.width = size[0];
+    IMG.height = size[1];
 
     // now process the individual exif metadata tags
     saveExifTags(exif).then(function (exifrefs) {
