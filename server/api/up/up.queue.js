@@ -75,6 +75,7 @@ Queue.prototype.add = function (stream, img) {
 //  Initialize upload of current original
 Queue.prototype.processCurrent = function () {
   var self = this, file = this.current;
+  var retry = process.env.PROCESS_RETRY_LIMIT | 2;
 
   if (file !== 666){
     //  Configure up object to current file if not already
@@ -87,14 +88,15 @@ Queue.prototype.processCurrent = function () {
       //  are we trying this again?
       if (typeof self.current.retry == 'undefined') {
         self.current.retry = 0;
-      } else if (self.current.retry < 3) {
+      } else if (self.current.retry < retry) {
         self.current.retry++;
-      } else {
+      }
+      if (self.current.retry >= retry) {
         self.bubble();
       }
     }
-    //  Try to process up to 3 times
-    if (typeof self.current.retry == 'undefined' || self.current.retry < 3) {
+    //  Try to process up to n times
+    if (typeof self.current.retry == 'undefined' || self.current.retry < retry) {
       this.up.sendDerivatives().then(
         //  on success - save file and emit
         function (img) {
@@ -134,13 +136,12 @@ Queue.prototype.onOriginal = function (id, data) {
 
 //  Clean finished upload and move to next original
 Queue.prototype.bubble = function () {
+  //  reset current
+  this.current = 666;
   //  if there are queue items ready, send the first one
   if (this.ready.length > 0) {
     this.current = this.ready.shift();
     this.processCurrent();
-  //  if not, reset current indicator
-  } else  {
-    this.current = 666;
   }
 }
 
