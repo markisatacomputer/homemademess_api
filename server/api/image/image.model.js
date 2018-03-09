@@ -52,7 +52,15 @@ var ImageSchema = new Schema({
   selected: [{
     type: ObjectId,
     ref: 'User'
-  }]
+  }],
+  updatedOriginal: {
+    type: Number,
+    default: 0
+  },
+  deletedCorrupt: {
+    type: Number,
+    default: 0
+  }
 });
 
 ImageSchema.post('remove', function (doc) {
