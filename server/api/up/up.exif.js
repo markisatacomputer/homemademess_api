@@ -152,8 +152,8 @@ function getSize(exif) {
   if (size) {
     return size.split('x');
   }
-  var width = getExifValue( exif, ['imagewidth', 'exifimagewidth'] );
-  var height = getExifValue( exif, ['imageheight', 'exifimageheight'] );
+  var width = getExifValue( exif, ['imagewidth', 'exifimagewidth', 'imagesourcewidth'] );
+  var height = getExifValue( exif, ['imageheight', 'exifimageheight', 'imagesourceheight'] );
   if (width && height) {
     return [width,height];
   }
