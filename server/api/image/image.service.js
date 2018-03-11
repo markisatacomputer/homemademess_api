@@ -18,6 +18,7 @@ function attachFilters() {
       var filter, resolveFilters;
 
       filter = {
+        order: {createDate: 'desc'},
         pagination: {
           page: 0,
           per: 60
@@ -40,6 +41,12 @@ function attachFilters() {
 
       //  if there is a query, let's parse it
       if (req.query) {
+        if (req.query.hasOwnProperty('order') && req.query.order !== 'createDate-') {
+          filter.order = {};
+          req.query.order.split(',').forEach( function (v, k) {
+            if (v.slice(-1) == '-') { filter.order[v.substr(0,v.length-1)] = 'desc';} else { filter.order[v] = 'asc'; }
+          });
+        }
         //  pagination params
         if (req.query.hasOwnProperty('page')) {
           filter.pagination.page = Number(req.query.page);
@@ -99,7 +106,6 @@ function attachFilters() {
       });
     });
 }
-
 
 function attachConditions() {
   return compose()

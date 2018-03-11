@@ -18,15 +18,16 @@ aws.config.endpoint = process.env.AWS_ENDPOINT;
 
 // Get list of all images
 exports.index = function(req, res) {
-  var filter, conditions, projection;
+  var order, filter, conditions, projection;
 
+  order = req.filter.order;
   filter = req.filter;
   conditions = req.conditions;
   projection = { //  don't include exif - please it's just too much
     exif: 0
   };
 
-  Image.find(conditions, projection).sort({createDate: 'desc'})
+  Image.find(conditions, projection).sort(order)
   .populate('tags', 'text')
   .lean()
   .limit(filter.pagination.per)
