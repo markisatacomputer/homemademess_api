@@ -34,31 +34,29 @@ exports.index = function(req, res) {
   .skip(filter.pagination.per*filter.pagination.page)
   .exec( function (err, images) {
 
-    if(err) { res.json(500, err); } else {
+    if(err) { return res.json(500, err); }
+
+
+    if (typeof(req.user._id) !== 'undefined') {
       // transform images as needed
       _.each(images, function(image, i){
         var selected;
 
         //  only include selected for admin users
         selected = false;
-        if (typeof(image.selected) !== 'undefined' && typeof(req.user._id) !== 'undefined') {
+        if (typeof(image.selected) !== 'undefined') {
           if (_.find(image.selected, req.user._id)) {
             selected = true;
           }
         }
         images[i].selected = selected;
-
-        //  send aliased derivatives if env var set
-        if (typeof process.env.THUMB_DOMAIN_ALIAS !== 'undefined') {
-          images[i].derivativePath = process.env.THUMB_DOMAIN_ALIAS + '/' + image._id + '/';
-        }
-      });
-
-      return res.json(200, {
-        images: images,
-        filter: filter
       });
     }
+
+    return res.json(200, {
+      images: images,
+      filter: filter
+    });
 
   });
 
