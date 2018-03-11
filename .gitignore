@@ -1,4 +1,5 @@
 node_modules
+_backup
 .DS_Store
 *tmp
 .idea
