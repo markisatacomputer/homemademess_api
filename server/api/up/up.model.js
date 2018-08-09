@@ -236,6 +236,12 @@ Upload.prototype.deriveVideos = function() {
     S3.send( function(err, data) {
       if (err) { viddefer.reject(err); }
       if (data) {
+        if (process.env.THUMB_DOMAIN_ALIAS) {
+          data.Location = 'https://'+process.env.THUMB_DOMAIN_ALIAS+'/'+self.IMG.id+'/'+dvfilename;
+        }
+        if (data.Location.toLowerCase().indexOf('http') !== 0) {
+          data.Location = 'https://'+data.Location
+        }
         //  store uri in derivative
         self.IMG.derivative.push({
           height: 480,
@@ -285,6 +291,12 @@ Upload.prototype.deriveVideos = function() {
         S3.send( function(err, data) {
           if (err) { gifdefer.reject(err); }
           if (data) {
+            if (process.env.THUMB_DOMAIN_ALIAS) {
+              data.Location = 'https://'+process.env.THUMB_DOMAIN_ALIAS+'/'+self.IMG.id+'/'+giffilename;
+            }
+            if (data.Location.toLowerCase().indexOf('http') !== 0) {
+              data.Location = 'https://'+data.Location
+            }
             //  store uri in derivative
             self.IMG.derivative.unshift({
               height: 240,
@@ -400,6 +412,9 @@ Upload.prototype.upDerivative = function() {
     //  send
     S3.send( function(err, data) {
       if (data) {
+        if (process.env.THUMB_DOMAIN_ALIAS) {
+          data.Location = 'https://'+process.env.THUMB_DOMAIN_ALIAS+'/'+self.derivative.key;
+        }
         //  store uri in derivative
         self.derivative.uri =  data.Location;
       }
