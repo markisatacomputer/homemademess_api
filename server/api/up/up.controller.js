@@ -32,6 +32,11 @@ exports.index = function(req, res) {
     // temporary - let's make it an hour limit
     i.temporary = Date.now() + 3600000;
 
+    // tags
+    if (typeof(req.headers['hmm-tag']) !== 'undefined') {
+      i.tags = req.headers['hmm-tag'].split(';');
+    }
+
     //  save image doc
     i.save(function(err){
       if (err) { return logErr(err, res); }
