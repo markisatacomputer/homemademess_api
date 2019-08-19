@@ -7,6 +7,7 @@ var jwt = require('jsonwebtoken');
 var expressJwt = require('express-jwt');
 var compose = require('composable-middleware');
 var User = require('../api/user/user.model');
+var Tag = require('../api/tag/tag.model');
 var validateJwt = expressJwt({ secret: config.secrets.session });
 
 /**
@@ -37,10 +38,23 @@ function isAuthenticated(required) {
       } else {
         User.findById(req.user._id, function (err, user) {
           if (err) return next(err);
-          if (!user) return res.send(401);
 
-          req.user = user;
-          next();
+          //  Look for tag if no user exists...
+          if (!user) {
+            Tag.findOne({
+              _id: req.user._id
+            }, function(err, tag) {
+              if (err) console.log('Error in isAuthenticated - Tag.findOne', err);
+              if (!tag) return res.send(401);
+              req.user = {_id: tag._id, role: 'download'};
+              return next();
+            });
+          //  Return User
+          } else {
+            req.user = user;
+            next();
+          }
+
         });
       }
     });

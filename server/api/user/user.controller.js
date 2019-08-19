@@ -1,6 +1,7 @@
 'use strict';
 
 var User = require('./user.model');
+var Tag = require('../tag/tag.model');
 var passport = require('passport');
 var config = require('../../config');
 var jwt = require('jsonwebtoken');
@@ -83,6 +84,10 @@ exports.changePassword = function(req, res, next) {
  * Get my info
  */
 exports.me = function(req, res, next) {
+  //  Special case: download
+  if (req.user.role == 'download') return res.json(req.user);
+
+  //  Otherwise
   var userId = req.user._id;
   User.findOne({
     _id: userId
