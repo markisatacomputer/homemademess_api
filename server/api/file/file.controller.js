@@ -58,5 +58,23 @@ exports.one = function(req, res) {
 };
 
 exports.many = function(req, res) {
-
+  var S3 = new aws.S3();
+  //  First get all our images
+  Image.find({
+    _id: { $in: req.body.download }
+  },
+  '_id filename',
+  function (err, docs) {
+    //  Now get signed urls for our images and write them to response
+    docs.forEach( (doc, i) => {
+      var params = {
+        Bucket: process.env.AWS_ORIGINAL_BUCKET,
+        Key: doc._id+'/'+doc.filename,
+      }
+      S3.getSignedUrl('getObject', params, function(err, url) {
+        res.write(url+'\r');
+        if (i==(req.body.download.length-1)) res.end();
+      });
+    })
+  });
 };
