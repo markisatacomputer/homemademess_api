@@ -11,9 +11,17 @@ function logErr (res, err) {
 
 exports.one = function(req, res) {
   var filepath = req.params.id,
-      id = filepath.split('/')[0];
-  Image.findById(id)
-  .exec( function (err, IMG) {
+      id = filepath.split('/')[0],
+      query = { _id: id };
+
+  //  Make sure download role can only
+  if (req.user.role == 'download') {
+    query.tags = {
+      $all: [ req.user._id ]
+    }
+  }
+
+  Image.findOne(query, function (err, IMG) {
     var params, S3, download;
 
     if (err) { return logErr(res, err); }
@@ -59,6 +67,16 @@ exports.one = function(req, res) {
 
 exports.many = function(req, res) {
   var S3 = new aws.S3();
+  var query = {
+    _id: { $in: req.body.download }
+  };
+  //  Make sure download role can only
+  if (req.user.role == 'download') {
+    query.tags = {
+      $all: [ req.user._id ]
+    }
+  }
+
   //  First get all our images
   Image.find({
     _id: { $in: req.body.download }
