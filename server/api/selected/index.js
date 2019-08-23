@@ -8,11 +8,11 @@ var insert = require('./selected.service');
 
 var router = express.Router();
 
-router.get('/', auth.hasRole('admin'), controller.index);
-router.post('/', auth.hasRole('admin'), insert.query(), attach.conditions(), controller.select);
-router.post('/:id', auth.hasRole('admin'), controller.selectOne);
-router.delete('/', auth.hasRole('admin'), insert.query(), attach.conditions(), controller.delete);
-router.delete('/:id', auth.hasRole('admin'), controller.deleteOne);
+router.get('/', auth.isAuthenticated(), controller.index);
+router.post('/', auth.isAuthenticated(), insert.query(), attach.conditions(), controller.select);
+router.post('/:id', auth.isAuthenticated(), controller.selectOne);
+router.delete('/', auth.isAuthenticated(), insert.query(), attach.conditions(), controller.delete);
+router.delete('/:id', auth.isAuthenticated(), controller.deleteOne);
 router.get('/tags', auth.hasRole('admin'), controller.getTags);
 router.post('/tags', auth.hasRole('admin'), controller.saveTags);
 router.delete('/tags/:id', auth.hasRole('admin'), controller.deleteTags);
